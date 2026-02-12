@@ -4,7 +4,8 @@
 from sys import argv
 from api import TradingAPI
 
-tapi = TradingAPI()
+API_KEY = "YOUR_API_KEY"
+tapi = TradingAPI(API_KEY)
 
 def saddle(t1: int, t2: int, n=1):
     if (t1 + t2) %2 != 0:
