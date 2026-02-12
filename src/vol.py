@@ -12,12 +12,15 @@ This module implements volatility arbitrage strategies by:
 import math
 from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass
+from api import TradingAPI
 
 # Option ticker constants
 STRIKES = [45, 46, 47, 48, 49, 50, 51, 52, 53, 54]
 CALL_TICKERS = [f"RTM1C{strike}" for strike in STRIKES]
 PUT_TICKERS = [f"RTM1P{strike}" for strike in STRIKES]
 ALL_OPTION_TICKERS = CALL_TICKERS + PUT_TICKERS
+
+API_KEY = "YOUR_API_KEY"
 
 # Trading constants
 RISK_FREE_RATE = 0.0  # r = 0% as specified
@@ -209,6 +212,7 @@ class VolatilityArbitrageTrader:
         self.bs_calc = BlackScholesCalculator()
         self.positions: List[OptionPosition] = []
         self.rtm_position = 0  # Net RTM shares held
+        self.tapi = TradingAPI(API_KEY)
     
     def update_time_to_expiration(self, days_remaining: float):
         """Update time to expiration as sub-heat progresses"""
@@ -409,37 +413,27 @@ class VolatilityArbitrageTrader:
         print(f"  New RTM position: {self.rtm_position} shares")
 
 
-def poll_option_prices() -> Dict[str, float]:
+def poll_option_prices(tapi: TradingAPI) -> Dict[str, float]:
     """
-    Dummy function to poll option prices from market.
-    Replace with actual API call.
-    
+    Poll option prices from the RIT securities API.
+    Uses bid/ask midpoint as market price.
+
     Returns:
         Dict mapping option ticker to market price
     """
-    # Example prices - in reality, fetch from RIT API
-    return {
-        'RTM1C45': 5.25,
-        'RTM1C46': 4.50,
-        'RTM1C47': 3.80,
-        'RTM1C48': 3.15,
-        'RTM1C49': 2.60,
-        'RTM1C50': 2.12,
-        'RTM1C51': 1.70,
-        'RTM1C52': 1.35,
-        'RTM1C53': 1.05,
-        'RTM1C54': 0.80,
-        'RTM1P45': 0.30,
-        'RTM1P46': 0.55,
-        'RTM1P47': 0.85,
-        'RTM1P48': 1.20,
-        'RTM1P49': 1.65,
-        'RTM1P50': 2.12,
-        'RTM1P51': 2.70,
-        'RTM1P52': 3.35,
-        'RTM1P53': 4.05,
-        'RTM1P54': 4.80,
-    }
+    securities = tapi.get_securities()
+    prices = {}
+    for sec in securities:
+        ticker = sec["ticker"]
+        if ticker not in ALL_OPTION_TICKERS:
+            continue
+        bid = sec.get("bid")
+        ask = sec.get("ask")
+        if bid and ask:
+            prices[ticker] = (bid + ask) / 2
+        elif sec.get("last"):
+            prices[ticker] = sec["last"]
+    return prices
 
 
 def get_analyst_vol() -> float:
