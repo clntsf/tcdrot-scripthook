@@ -212,6 +212,7 @@ class VolatilityArbitrageTrader:
         self.bs_calc = BlackScholesCalculator()
         self.positions: List[OptionPosition] = []
         self.rtm_position = 0  # Net RTM shares held
+        self.last_realized_vol = 0.35  # Updated each loop tick from analyst feed
         self.tapi = TradingAPI(API_KEY)
     
     def update_time_to_expiration(self, days_remaining: float):
@@ -372,14 +373,12 @@ class VolatilityArbitrageTrader:
             return 'HOLD', 0
     
     def execute_trade(self, signal: TradeSignal) -> OptionPosition:
-        """
-        Execute an option trade and return the position created.
-        This is a dummy function - replace with actual API call.
-        """
+        """Execute an option trade via the API and record the resulting position."""
+        self.tapi.post_order(signal.ticker, "MARKET", signal.quantity, signal.action)
+
         is_call, strike = self.parse_ticker(signal.ticker)
-        
         quantity = signal.quantity if signal.action == 'BUY' else -signal.quantity
-        
+
         position = OptionPosition(
             ticker=signal.ticker,
             quantity=quantity,
@@ -388,29 +387,104 @@ class VolatilityArbitrageTrader:
             delta=signal.delta,
             entry_price=signal.market_price
         )
-        
+
         self.positions.append(position)
-        
+
         print(f"EXECUTED: {signal.action} {signal.quantity} contracts of {signal.ticker} @ ${signal.market_price:.2f}")
         print(f"  Edge: ${signal.edge:.2f}, IV: {signal.implied_vol:.1%}, RV: {signal.realized_vol:.1%}")
-        
+
         return position
     
     def execute_hedge(self, action: str, quantity: int):
-        """
-        Execute RTM hedge trade.
-        This is a dummy function - replace with actual API call.
-        """
-        if action == 'HOLD':
+        """Execute RTM hedge trade via the API."""
+        if action == 'HOLD' or quantity == 0:
             return
-        
+
         if action == 'BUY':
+            self.tapi.buy("RTM1", quantity)
             self.rtm_position += quantity
         else:  # SELL
+            self.tapi.sell("RTM1", quantity)
             self.rtm_position -= quantity
-        
-        print(f"HEDGE: {action} {quantity} shares of RTM @ ${self.rtm_price:.2f}")
+
+        print(f"HEDGE: {action} {quantity} shares of RTM1 @ ${self.rtm_price:.2f}")
         print(f"  New RTM position: {self.rtm_position} shares")
+
+    def sync_state(self) -> Dict[str, float]:
+        """
+        Fetch current market state from the API and update trader internals.
+        Returns the option price dict (bid/ask midpoint per ticker).
+        """
+        case = self.tapi.get_case()
+        ticks_left = case["ticks_per_period"] - case["tick"]
+        self.time_to_expiration = (ticks_left / case["ticks_per_period"]) * (MONTH_DAYS / TRADING_YEAR_DAYS)
+
+        securities = self.tapi.get_securities()
+        prices: Dict[str, float] = {}
+        new_positions: List[OptionPosition] = []
+
+        for sec in securities:
+            ticker = sec["ticker"]
+            bid, ask, last = sec.get("bid"), sec.get("ask"), sec.get("last")
+            mid = (bid + ask) / 2 if bid and ask else (last or 0.0)
+
+            if ticker == "RTM1":
+                self.rtm_price = mid
+                self.rtm_position = int(sec.get("position", 0))
+            elif ticker in ALL_OPTION_TICKERS:
+                prices[ticker] = mid
+                qty = int(sec.get("position", 0))
+                if qty != 0:
+                    is_call, strike = self.parse_ticker(ticker)
+                    delta = self.calculate_delta(ticker, self.last_realized_vol)
+                    new_positions.append(OptionPosition(
+                        ticker=ticker, quantity=qty, strike=strike,
+                        is_call=is_call, delta=delta, entry_price=mid
+                    ))
+
+        self.positions = new_positions
+        return prices
+
+    def check_limits(self) -> bool:
+        """Return True if there is headroom to add more positions (5% safety buffer)."""
+        for lim in self.tapi.get_limits():
+            if lim["gross"] >= lim["gross_limit"] * 0.95:
+                return False
+            if abs(lim["net"]) >= lim["net_limit"] * 0.95:
+                return False
+        return True
+
+    def calc_order_quantity(self) -> int:
+        """
+        Return per-trade contract size that spreads remaining net headroom evenly
+        across all option tickers, leaving room for future trades.
+        """
+        min_qty = float("inf")
+        for lim in self.tapi.get_limits():
+            headroom = lim["net_limit"] * 0.95 - abs(lim["net"])
+            per_trade = max(1, int(headroom // len(ALL_OPTION_TICKERS)))
+            min_qty = min(min_qty, per_trade)
+        return int(min_qty) if min_qty != float("inf") else 10
+
+    def close_corrected_positions(self, option_prices: Dict[str, float],
+                                  realized_vol: float, close_threshold: float = 0.03):
+        """
+        Close positions where the mispricing has been corrected by the market maker.
+        - Long positions: close when market price has risen (edge <= close_threshold)
+        - Short positions: close when market price has fallen (edge >= -close_threshold)
+        """
+        for pos in list(self.positions):
+            market_price = option_prices.get(pos.ticker)
+            if market_price is None:
+                continue
+            fair_value = self.calculate_fair_value(pos.ticker, realized_vol)
+            edge = fair_value - market_price
+            if pos.quantity > 0 and edge <= close_threshold:
+                self.tapi.post_order(pos.ticker, "MARKET", abs(pos.quantity), "SELL")
+                print(f"CLOSE LONG:  {pos.ticker} @ ${market_price:.2f} (fair=${fair_value:.2f}, edge=${edge:.2f})")
+            elif pos.quantity < 0 and edge >= -close_threshold:
+                self.tapi.post_order(pos.ticker, "MARKET", abs(pos.quantity), "BUY")
+                print(f"CLOSE SHORT: {pos.ticker} @ ${market_price:.2f} (fair=${fair_value:.2f}, edge=${edge:.2f})")
 
 
 def poll_option_prices(tapi: TradingAPI) -> Dict[str, float]:
@@ -448,58 +522,56 @@ def get_analyst_vol() -> float:
     return 0.35  # 35% volatility
 
 
-def main():
-    """Main trading loop"""
+def run_trading_loop():
+    """Main polling loop: sync state, close corrected positions, open new trades, hedge, sleep."""
+    import time
+
+    # rtm_price and time_to_expiration will be overwritten by sync_state() on the first tick
+    trader = VolatilityArbitrageTrader(rtm_price=50.0, time_to_expiration_days=20)
+
     print("=" * 60)
-    print("VOLATILITY ARBITRAGE TRADER")
+    print("VOLATILITY ARBITRAGE TRADER — live loop started")
     print("=" * 60)
-    
-    # Initialize trader
-    rtm_price = 50.00  # Current RTM price
-    trader = VolatilityArbitrageTrader(rtm_price=rtm_price, time_to_expiration_days=20)
-    
-    # Get market data
-    print("\n1. Fetching market data...")
-    option_prices = poll_option_prices()
-    realized_vol = get_analyst_vol()
-    
-    print(f"   RTM Price: ${rtm_price:.2f}")
-    print(f"   Analyst Realized Vol: {realized_vol:.1%}")
-    print(f"   Options to analyze: {len(option_prices)}")
-    
-    # Identify mispricings
-    print("\n2. Identifying mispricings...")
-    signals = trader.identify_mispricings(option_prices, realized_vol, min_edge=0.10)
-    
-    print(f"   Found {len(signals)} profitable opportunities")
-    
-    # Display top opportunities
-    if signals:
-        print("\n   Top 5 opportunities:")
-        for i, signal in enumerate(signals[:5], 1):
-            print(f"   {i}. {signal.ticker}: {signal.action} @ ${signal.market_price:.2f}")
-            print(f"      Edge: ${signal.edge:.2f} | IV: {signal.implied_vol:.1%} | RV: {signal.realized_vol:.1%}")
-    
-    # Execute trades
-    print("\n3. Executing trades...")
-    for signal in signals[:3]:  # Trade top 3 opportunities
-        trader.execute_trade(signal)
-    
-    # Calculate and execute hedge
-    print("\n4. Delta hedging...")
-    portfolio_delta = trader.calculate_portfolio_delta()
-    print(f"   Current portfolio delta: {portfolio_delta:.2f}")
-    
-    action, quantity = trader.calculate_hedge_trade(target_delta=0)
-    trader.execute_hedge(action, quantity)
-    
-    final_delta = trader.calculate_portfolio_delta()
-    print(f"   Final portfolio delta: {final_delta:.2f}")
-    
-    print("\n" + "=" * 60)
-    print("Trading cycle complete!")
-    print("=" * 60)
+
+    while True:
+        try:
+            # 1. Sync market state and get current option prices
+            option_prices = trader.sync_state()
+
+            # 2. Get analyst volatility forecast
+            realized_vol = get_analyst_vol()
+            trader.last_realized_vol = realized_vol
+
+            print(f"\n[tick] RTM1=${trader.rtm_price:.2f}  RV={realized_vol:.1%}"
+                  f"  T={trader.time_to_expiration * TRADING_YEAR_DAYS:.1f}d"
+                  f"  positions={len(trader.positions)}")
+
+            # 3. Close positions where mispricing has been corrected
+            trader.close_corrected_positions(option_prices, realized_vol)
+
+            # 4. Re-hedge after any closes
+            action, qty = trader.calculate_hedge_trade(target_delta=0.0)
+            trader.execute_hedge(action, qty)
+
+            # 5. Identify and open new mispriced positions if within limits
+            if trader.check_limits():
+                signals = trader.identify_mispricings(option_prices, realized_vol, min_edge=0.10)
+                order_qty = trader.calc_order_quantity()
+                for signal in signals:
+                    if not trader.check_limits():
+                        break
+                    signal.quantity = order_qty
+                    trader.execute_trade(signal)
+
+            # 6. Re-hedge after new positions
+            action, qty = trader.calculate_hedge_trade(target_delta=0.0)
+            trader.execute_hedge(action, qty)
+
+        except Exception as e:
+            print(f"Loop error: {e}")
+
+        time.sleep(1)
 
 
 if __name__ == "__main__":
-    main()
+    run_trading_loop()
