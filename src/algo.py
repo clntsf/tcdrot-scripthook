@@ -6,11 +6,10 @@ from dotenv import load_dotenv
 from os import getenv
 from pathlib import Path
 
-API_KEY = Path(__file__).parent / ".env"
+DOTENV_PATH = Path(__file__).parent / ".env"
+load_dotenv(DOTENV_PATH)
 s = requests.Session()
-s.headers.update({'X-API-key': API_KEY})
-
-print(getenv("ROT_API_KEY"))
+s.headers.update({'X-API-key': getenv("ROT_API_KEY")})
 
 #Sample setup
 MAX_EXPOSURE = 15000

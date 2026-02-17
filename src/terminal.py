@@ -16,11 +16,16 @@ import requests
 import time
 import threading
 import math
+from dotenv import load_dotenv
+from os import getenv
+from pathlib import Path
 
 # ============================================================
 # CONFIGURATION - Change these to match your RIT setup
 # ============================================================
-API_KEY = "8NKMTW4W"   # RIT Client > Settings > API
+DOTENV_PATH = Path(__file__).parent / ".env"
+load_dotenv(DOTENV_PATH)
+API_KEY = getenv("ROT_API_KEY")
 BASE_URL = "http://localhost:9999/v1"
 
 MAX_ORDER_SIZE = 10000  # Max shares per single order
