@@ -393,7 +393,7 @@ def main():
 
                     pos_c = RED if abs(position) > 2000 else YELLOW if abs(position) > 1000 else GREEN
                     print(f"    {ticker:<6} bid={best_bid:.2f} ask={best_ask:.2f}"
-                          f" spd={spread:.2f} pos={pos_c}{position:>+6d}{RESET}  {act}")
+                          f" spd={spread:.2f} pos={pos_c}{position:>+6f}{RESET}  {act}")
 
                     quotes[ticker] = {"our_bid": our_bid, "our_ask": our_ask, "qty": order_qty}
 
