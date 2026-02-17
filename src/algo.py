@@ -32,26 +32,27 @@ TICKERS = ["SPNG", "SMMR", "ATMN", "WNTR"]
 MARKET_FEE = 0.02
 
 REBATES = {"SPNG": 0.01, "SMMR": 0.02, "ATMN": 0.015, "WNTR": 0.025}
-MIN_HALF_SPREAD = {t: max(0.0, MARKET_FEE - REBATES[t]) + 0.01 for t in TICKERS}
-# SPNG: 0.02, SMMR: 0.01, ATMN: 0.015, WNTR: 0.01
+MIN_HALF_SPREAD = {t: max(0.0, MARKET_FEE - REBATES[t]) + 0.03 for t in TICKERS}
+# SPNG: 0.04, SMMR: 0.03, ATMN: 0.035, WNTR: 0.03
+# Wider than before (+0.02) — tight quotes were getting adversely selected
 
 # ── Tuning parameters ──
-SKEW_FACTOR = 0.0002       # mid shift per unit of inventory (doubled for faster mean-reversion)
-BASE_ORDER_SIZE = 3000     # up from 1000 — we were only using 6% of gross limit
-MAX_ORDER_SIZE = 10000
-MAX_PER_TICKER = 3500      # hard cap per-ticker position — WNTR hit 14k at 5000, too much
+SKEW_FACTOR = 0.0005       # mid shift per unit of inventory (aggressive mean-reversion)
+BASE_ORDER_SIZE = 1500     # down from 3000 — large fills get adversely selected
+MAX_ORDER_SIZE = 5000      # down from 10000 — cap any single order
+MAX_PER_TICKER = 2500      # hard cap per-ticker position
 LIMIT_SAFETY_PCT = 0.90    # only use 90% of gross/net limits (10% buffer for fines)
 EWMA_ALPHA = 0.3           # mid-price tracker decay
 
 # Close-out thresholds (tick within each 60-tick minute)
-UNWIND_LIMIT_START = 50    # was 45 — data shows we flatten in 5-7 ticks, no need to start so early
-UNWIND_AGGRESSIVE = 54     # was 50
-UNWIND_MARKET = 57
+UNWIND_LIMIT_START = 48    # start unwinding earlier (was 50) — give more time given inverted books
+UNWIND_AGGRESSIVE = 52
+UNWIND_MARKET = 56         # market orders 1 tick earlier to handle inverted books
 
-# Post-news behaviour
-NEWS_WIDEN_TICKS = 3       # reduced from 5 — only widen for first 3 ticks
-NEWS_SPREAD_MULT = 2.5     # slightly wider during news to avoid adverse selection
-NEWS_SIZE_MULT = 0.3       # reduce order size during news ticks (new)
+# Post-news behaviour — first 15 ticks cause 87% of losses
+NEWS_WIDEN_TICKS = 10      # up from 3 — data shows first 15 ticks are dangerous
+NEWS_SPREAD_MULT = 3.0     # much wider during news — informed traders are picking us off
+NEWS_SIZE_MULT = 0.15      # down from 0.3 — only 15% size during news (was still getting 3k+ fills)
 
 # EWMA state
 ewma_mids = {t: None for t in TICKERS}
@@ -153,8 +154,9 @@ def compute_skewed_quotes(ticker, best_bid, best_ask, position, tick_in_minute):
     # Inventory skew: if long, lower mid → more aggressive sell
     skewed_mid = mid - SKEW_FACTOR * position
 
-    # Half-spread: penny-improve the market, but enforce minimum
-    half_spread = max(MIN_HALF_SPREAD[ticker], market_half - 0.01)
+    # Half-spread: match the market or use minimum, whichever is wider
+    # (removed penny-improvement — it was making us a target for adverse selection)
+    half_spread = max(MIN_HALF_SPREAD[ticker], market_half)
 
     # Widen after news (first ticks of each minute)
     if tick_in_minute < NEWS_WIDEN_TICKS:
@@ -204,8 +206,8 @@ def compute_order_size(ticker, position, aggregate_exposure, max_exposure, tick_
     if abs(position) >= MAX_PER_TICKER:
         size *= 0.1  # minimal quoting only
 
-    # Rebate boost (normalised to SPNG baseline)
-    size *= 1.0 + (REBATES[ticker] - 0.01) / 0.01
+    # Mild rebate boost (capped at 1.5x to avoid outsized adverse selection targets)
+    size *= min(1.5, 1.0 + (REBATES[ticker] - 0.01) / 0.02)
 
     # Post-news caution: smaller size for first few ticks after minute boundary
     if tick_in_minute < NEWS_WIDEN_TICKS:
