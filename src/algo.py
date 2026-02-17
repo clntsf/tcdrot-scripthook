@@ -40,7 +40,7 @@ MIN_HALF_SPREAD = {t: max(0.0, MARKET_FEE - REBATES[t]) + 0.03 for t in TICKERS}
 SKEW_FACTOR = 0.0005       # mid shift per unit of inventory (aggressive mean-reversion)
 BASE_ORDER_SIZE = 1500     # down from 3000 — large fills get adversely selected
 MAX_ORDER_SIZE = 5000      # down from 10000 — cap any single order
-MAX_PER_TICKER = 2500      # hard cap per-ticker position
+MAX_PER_TICKER = 1500      # hard cap per-ticker position (was 2500, positions still too large)
 LIMIT_SAFETY_PCT = 0.90    # only use 90% of gross/net limits (10% buffer for fines)
 EWMA_ALPHA = 0.3           # mid-price tracker decay
 
@@ -54,8 +54,20 @@ NEWS_WIDEN_TICKS = 10      # up from 3 — data shows first 15 ticks are dangero
 NEWS_SPREAD_MULT = 3.0     # much wider during news — informed traders are picking us off
 NEWS_SIZE_MULT = 0.15      # down from 0.3 — only 15% size during news (was still getting 3k+ fills)
 
+# Mid-period caution — t_min 20-35 showed worst adverse selection in logs
+MID_PERIOD_START = 20
+MID_PERIOD_END = 35
+MID_PERIOD_SPREAD_MULT = 1.5   # widen spread 50% during mid-period
+MID_PERIOD_SIZE_MULT = 0.6     # reduce size 40% during mid-period
+
 # EWMA state
 ewma_mids = {t: None for t in TICKERS}
+
+# Momentum state — track recent mid-price changes for trend detection
+mid_history = {t: [] for t in TICKERS}
+MOMENTUM_LOOKBACK = 5       # ticks to measure trend over
+MOMENTUM_THRESHOLD = 0.03   # min price move to count as trending ($0.03)
+MOMENTUM_SKEW = 0.5         # extra half-spread added to against-trend side
 
 
 # ════════════════════════════════════════════════════════════
@@ -143,9 +155,20 @@ def update_ewma(ticker, current_mid):
     return abs(current_mid - ewma_mids[ticker])
 
 
+def compute_momentum(ticker, current_mid):
+    """Track recent mid-price changes and return trend direction.
+    Returns: positive = trending up, negative = trending down, 0 = no trend."""
+    mid_history[ticker].append(current_mid)
+    if len(mid_history[ticker]) > MOMENTUM_LOOKBACK + 1:
+        mid_history[ticker] = mid_history[ticker][-(MOMENTUM_LOOKBACK + 1):]
+    if len(mid_history[ticker]) < 3:
+        return 0.0
+    return current_mid - mid_history[ticker][0]
+
+
 def compute_skewed_quotes(ticker, best_bid, best_ask, position, tick_in_minute):
     """
-    Inventory-skewed quoting with penny improvement,
+    Inventory-skewed quoting with trend awareness,
     news widening, and minimum profitable spread.
     """
     mid = (best_bid + best_ask) / 2
@@ -155,15 +178,31 @@ def compute_skewed_quotes(ticker, best_bid, best_ask, position, tick_in_minute):
     skewed_mid = mid - SKEW_FACTOR * position
 
     # Half-spread: match the market or use minimum, whichever is wider
-    # (removed penny-improvement — it was making us a target for adverse selection)
     half_spread = max(MIN_HALF_SPREAD[ticker], market_half)
 
     # Widen after news (first ticks of each minute)
     if tick_in_minute < NEWS_WIDEN_TICKS:
         half_spread *= NEWS_SPREAD_MULT
+    # Mid-period caution — informed traders still active
+    elif MID_PERIOD_START <= tick_in_minute <= MID_PERIOD_END:
+        half_spread *= MID_PERIOD_SPREAD_MULT
 
-    our_bid = round(skewed_mid - half_spread, 2)
-    our_ask = round(skewed_mid + half_spread, 2)
+    # Momentum-aware asymmetric spread: widen the side that's against the trend
+    momentum = compute_momentum(ticker, mid)
+    bid_extra = 0.0
+    ask_extra = 0.0
+    if abs(momentum) > MOMENTUM_THRESHOLD:
+        if momentum > 0:
+            # Price trending UP → our sells are getting picked off
+            # Widen ask (sell side), tighten bid (buy side)
+            ask_extra = MOMENTUM_SKEW * min(abs(momentum), 0.20)
+        else:
+            # Price trending DOWN → our buys are getting picked off
+            # Widen bid (buy side), tighten ask (sell side)
+            bid_extra = MOMENTUM_SKEW * min(abs(momentum), 0.20)
+
+    our_bid = round(skewed_mid - half_spread - bid_extra, 2)
+    our_ask = round(skewed_mid + half_spread + ask_extra, 2)
 
     # Safety: never quote through the market
     our_bid = min(our_bid, best_ask - 0.01)
@@ -207,11 +246,17 @@ def compute_order_size(ticker, position, aggregate_exposure, max_exposure, tick_
         size *= 0.1  # minimal quoting only
 
     # Mild rebate boost (capped at 1.5x to avoid outsized adverse selection targets)
-    size *= min(1.5, 1.0 + (REBATES[ticker] - 0.01) / 0.02)
+    # BUT not during news — informed traders target high-rebate tickers
+    if tick_in_minute >= NEWS_WIDEN_TICKS:
+        size *= min(1.5, 1.0 + (REBATES[ticker] - 0.01) / 0.02)
 
     # Post-news caution: smaller size for first few ticks after minute boundary
+    # Applied AFTER rebate boost is skipped, so all tickers get uniform reduction
     if tick_in_minute < NEWS_WIDEN_TICKS:
         size *= NEWS_SIZE_MULT
+    # Mid-period: reduce size where adverse selection is worst
+    elif MID_PERIOD_START <= tick_in_minute <= MID_PERIOD_END:
+        size *= MID_PERIOD_SIZE_MULT
 
     return max(100, min(int(size), MAX_ORDER_SIZE))
 
@@ -350,6 +395,11 @@ def main():
             aggregate_exposure = compute_aggregate_exposure(securities_data)
             tick_in_minute = tick % 60
 
+            # Reset momentum history at minute boundaries (news resets trends)
+            if tick_in_minute == 0:
+                for t in TICKERS:
+                    mid_history[t].clear()
+
             # Compute current gross/net from positions (sum |pos| and sum pos)
             api_gross = sum(abs(securities_data.get(t, {}).get("position", 0)) for t in TICKERS)
             api_net = sum(securities_data.get(t, {}).get("position", 0) for t in TICKERS)
@@ -465,9 +515,7 @@ def main():
             log_tick(log_fh, tick, tick_in_minute, securities_data, quotes,
                      aggregate_exposure, api_gross, api_net, max_exposure, max_net, nlv, actions)
 
-            # 5. Pace the loop (~0.25s target cycle)
-            elapsed = time.time() - loop_start
-            time.sleep(max(0.05, 0.25 - elapsed))
+            time.sleep(0.5)
 
     except KeyboardInterrupt:
         print(f"\n  {BOLD}Shutting down.{RESET}")
