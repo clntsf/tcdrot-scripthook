@@ -36,19 +36,21 @@ MIN_HALF_SPREAD = {t: max(0.0, MARKET_FEE - REBATES[t]) + 0.01 for t in TICKERS}
 # SPNG: 0.02, SMMR: 0.01, ATMN: 0.015, WNTR: 0.01
 
 # ── Tuning parameters ──
-SKEW_FACTOR = 0.0001       # mid shift per unit of inventory
-BASE_ORDER_SIZE = 1000
+SKEW_FACTOR = 0.0002       # mid shift per unit of inventory (doubled for faster mean-reversion)
+BASE_ORDER_SIZE = 3000     # up from 1000 — we were only using 6% of gross limit
 MAX_ORDER_SIZE = 10000
+MAX_PER_TICKER = 5000      # hard cap per-ticker position to avoid blowups
 EWMA_ALPHA = 0.3           # mid-price tracker decay
 
 # Close-out thresholds (tick within each 60-tick minute)
-UNWIND_LIMIT_START = 45
-UNWIND_AGGRESSIVE = 50
+UNWIND_LIMIT_START = 50    # was 45 — data shows we flatten in 5-7 ticks, no need to start so early
+UNWIND_AGGRESSIVE = 54     # was 50
 UNWIND_MARKET = 57
 
-# Post-news spread widening
-NEWS_WIDEN_TICKS = 5
-NEWS_SPREAD_MULT = 2.0
+# Post-news behaviour
+NEWS_WIDEN_TICKS = 3       # reduced from 5 — only widen for first 3 ticks
+NEWS_SPREAD_MULT = 2.5     # slightly wider during news to avoid adverse selection
+NEWS_SIZE_MULT = 0.3       # reduce order size during news ticks (new)
 
 # EWMA state
 ewma_mids = {t: None for t in TICKERS}
@@ -159,10 +161,10 @@ def compute_skewed_quotes(ticker, best_bid, best_ask, position, tick_in_minute):
     return our_bid, our_ask
 
 
-def compute_order_size(ticker, position, aggregate_exposure, max_exposure):
+def compute_order_size(ticker, position, aggregate_exposure, max_exposure, tick_in_minute):
     """
     Dynamic sizing: scales with headroom, decays with inventory,
-    boosts for higher-rebate tickers.
+    boosts for higher-rebate tickers, reduces during news.
     """
     headroom = max(0, max_exposure - aggregate_exposure)
     per_ticker = headroom / len(TICKERS)
@@ -173,8 +175,16 @@ def compute_order_size(ticker, position, aggregate_exposure, max_exposure):
     if per_ticker_max > 0:
         size *= max(0.1, 1.0 - abs(position) / per_ticker_max)
 
+    # Hard cap: don't add to a position that's already at per-ticker limit
+    if abs(position) >= MAX_PER_TICKER:
+        size *= 0.1  # minimal quoting only
+
     # Rebate boost (normalised to SPNG baseline)
     size *= 1.0 + (REBATES[ticker] - 0.01) / 0.01
+
+    # Post-news caution: smaller size for first few ticks after minute boundary
+    if tick_in_minute < NEWS_WIDEN_TICKS:
+        size *= NEWS_SIZE_MULT
 
     return max(100, min(int(size), MAX_ORDER_SIZE))
 
@@ -200,7 +210,7 @@ def handle_unwind(tick_in_minute, securities_data):
 
         best_bid = sec.get("bid")
         best_ask = sec.get("ask")
-        if best_bid is None or best_ask is None:
+        if not best_bid or not best_ask or best_bid <= 0 or best_ask <= 0:
             continue
 
         action = "SELL" if position > 0 else "BUY"
@@ -355,8 +365,8 @@ def main():
                     best_ask = sec.get("ask")
                     position = sec.get("position", 0)
 
-                    if best_bid is None or best_ask is None:
-                        print(f"    {ticker}: {YELLOW}no book{RESET}")
+                    if not best_bid or not best_ask or best_bid <= 0 or best_ask <= 0:
+                        print(f"    {ticker}: {YELLOW}no book (bid={best_bid} ask={best_ask}){RESET}")
                         continue
 
                     mid = (best_bid + best_ask) / 2
@@ -377,7 +387,7 @@ def main():
 
                     # Dynamic order size
                     order_qty = compute_order_size(
-                        ticker, position, aggregate_exposure, max_exposure
+                        ticker, position, aggregate_exposure, max_exposure, tick_in_minute
                     )
 
                     # Quote if headroom allows
@@ -391,9 +401,9 @@ def main():
                         act = f"{RED}at limit — skipped{RESET}"
                         actions.append(f"skip:{ticker}")
 
-                    pos_c = RED if abs(position) > 2000 else YELLOW if abs(position) > 1000 else GREEN
+                    pos_c = RED if abs(position) > 3000 else YELLOW if abs(position) > 1500 else GREEN
                     print(f"    {ticker:<6} bid={best_bid:.2f} ask={best_ask:.2f}"
-                          f" spd={spread:.2f} pos={pos_c}{position:>+6f}{RESET}  {act}")
+                          f" spd={spread:.2f} pos={pos_c}{position:>+6.0f}{RESET}  {act}")
 
                     quotes[ticker] = {"our_bid": our_bid, "our_ask": our_ask, "qty": order_qty}
 
