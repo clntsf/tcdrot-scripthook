@@ -40,6 +40,7 @@ SKEW_FACTOR = 0.0002       # mid shift per unit of inventory (doubled for faster
 BASE_ORDER_SIZE = 3000     # up from 1000 — we were only using 6% of gross limit
 MAX_ORDER_SIZE = 10000
 MAX_PER_TICKER = 5000      # hard cap per-ticker position to avoid blowups
+LIMIT_SAFETY_PCT = 0.90    # only use 90% of gross/net limits (10% buffer for fines)
 EWMA_ALPHA = 0.3           # mid-price tracker decay
 
 # Close-out thresholds (tick within each 60-tick minute)
@@ -161,14 +162,30 @@ def compute_skewed_quotes(ticker, best_bid, best_ask, position, tick_in_minute):
     return our_bid, our_ask
 
 
-def compute_order_size(ticker, position, aggregate_exposure, max_exposure, tick_in_minute):
+def compute_safe_limit(gross, net, gross_limit, net_limit):
+    """
+    Return the max order qty we can safely place on one side,
+    respecting both gross and net limits with safety buffer.
+    """
+    safe_gross = gross_limit * LIMIT_SAFETY_PCT
+    safe_net = net_limit * LIMIT_SAFETY_PCT
+    gross_headroom = max(0, safe_gross - gross)
+    net_headroom = max(0, safe_net - abs(net))
+    return min(gross_headroom, net_headroom)
+
+
+def compute_order_size(ticker, position, aggregate_exposure, max_exposure, tick_in_minute,
+                       limit_headroom):
     """
     Dynamic sizing: scales with headroom, decays with inventory,
     boosts for higher-rebate tickers, reduces during news.
+    Now also constrained by actual API limit headroom.
     """
+    # Start from the lesser of our desired size and what limits allow
+    per_ticker_headroom = limit_headroom / max(1, len(TICKERS))
     headroom = max(0, max_exposure - aggregate_exposure)
     per_ticker = headroom / len(TICKERS)
-    size = min(BASE_ORDER_SIZE, per_ticker)
+    size = min(BASE_ORDER_SIZE, per_ticker, per_ticker_headroom)
 
     # Reduce as per-ticker inventory grows
     per_ticker_max = max_exposure / len(TICKERS)
@@ -247,18 +264,10 @@ def open_log():
 
 
 def log_tick(fh, tick, tick_in_minute, securities_data, quotes, aggregate_exposure,
-             limits, actions):
+             api_gross, api_net, gross_lim, net_lim, actions):
     """Write one structured line per tick."""
-    gross = net = gross_lim = net_lim = 0
-    if limits:
-        lim = limits[0]
-        gross = lim.get("gross", 0)
-        net = lim.get("net", 0)
-        gross_lim = lim.get("gross_limit", 0)
-        net_lim = lim.get("net_limit", 0)
-
     parts = [str(tick), str(tick_in_minute), str(aggregate_exposure),
-             f"{gross}", f"{net}", f"{gross_lim}", f"{net_lim}"]
+             f"{api_gross}", f"{api_net}", f"{gross_lim}", f"{net_lim}"]
 
     for t in TICKERS:
         sec = securities_data.get(t, {})
@@ -291,14 +300,20 @@ def main():
         time.sleep(1)
         tick, status, _tpp = fetch_tick()
 
-    # Read limits from API
+    # Read limits from API (fixed for entire trial)
     limits = fetch_limits()
-    max_exposure = limits[0].get("gross_limit", 15000) if limits else 15000
+    if limits:
+        lim = limits[0]
+        max_exposure = lim.get("gross_limit", 15000)
+        max_net = lim.get("net_limit", 30000)
+    else:
+        max_exposure = 15000
+        max_net = 30000
 
     # Setup logging
     log_fh, log_path = open_log()
 
-    print(f"  max_exposure={max_exposure} (from API)")
+    print(f"  gross_limit={max_exposure}, net_limit={max_net} (from API)")
     print(f"  Tickers: {', '.join(TICKERS)}")
     print(f"  Rebates: { {t: f'${v:.3f}' for t, v in REBATES.items()} }")
     print(f"  Log: {log_path}")
@@ -312,20 +327,23 @@ def main():
             # 1. Cancel all outstanding orders
             cancel_all_orders()
 
-            # 2. Fetch state (3 API calls total)
+            # 2. Fetch state (2 API calls — limits are fixed per trial)
             tick, status, _tpp = fetch_tick()
             if status != "ACTIVE":
                 break
             securities_data = fetch_all_securities()
-            limits = fetch_limits()
-            if limits:
-                max_exposure = limits[0].get("gross_limit", max_exposure)
 
             aggregate_exposure = compute_aggregate_exposure(securities_data)
             tick_in_minute = tick % 60
 
-            # Exposure display
-            exposure_pct = (aggregate_exposure / max_exposure * 100) if max_exposure else 0
+            # Compute current gross/net from positions (sum |pos| and sum pos)
+            api_gross = sum(abs(securities_data.get(t, {}).get("position", 0)) for t in TICKERS)
+            api_net = sum(securities_data.get(t, {}).get("position", 0) for t in TICKERS)
+
+            limit_headroom = compute_safe_limit(api_gross, api_net, max_exposure, max_net)
+
+            # Exposure display (use API gross as source of truth)
+            exposure_pct = (api_gross / max_exposure * 100) if max_exposure else 0
             if exposure_pct >= 90:
                 exp_c = RED
             elif exposure_pct >= 70:
@@ -342,7 +360,8 @@ def main():
                          else "AGG" if tick_in_minute >= UNWIND_AGGRESSIVE
                          else "LMT")
                 print(f"  {RED}{BOLD}[tick {tick} | t={tick_in_minute}] UNWIND ({phase}){RESET}"
-                      f"  exp: {exp_c}{aggregate_exposure}/{max_exposure}{RESET}")
+                      f"  gross: {exp_c}{api_gross:.0f}/{max_exposure}{RESET}"
+                      f"  net: {api_net:.0f}/{max_net}")
 
                 for ticker, action, qty, price in handle_unwind(tick_in_minute, securities_data):
                     # Split large orders into MAX_ORDER_SIZE chunks
@@ -356,8 +375,14 @@ def main():
                     actions.append(f"unwind:{ticker}:{action}:{qty}:{tag}")
 
             else:
+                net_pct = (abs(api_net) / max_net * 100) if max_net else 0
+                net_c = RED if net_pct >= 90 else YELLOW if net_pct >= 70 else GREEN
                 print(f"  {DIM}[tick {tick} | t={tick_in_minute}]{RESET}"
-                      f"  exp: {exp_c}{aggregate_exposure}/{max_exposure} ({exposure_pct:.0f}%){RESET}")
+                      f"  gross: {exp_c}{api_gross:.0f}/{max_exposure} ({exposure_pct:.0f}%){RESET}"
+                      f"  net: {net_c}{api_net:.0f}/{max_net} ({net_pct:.0f}%){RESET}")
+
+                # Track cumulative orders this loop so later tickers account for earlier ones
+                loop_gross_committed = 0
 
                 for ticker in TICKERS:
                     sec = securities_data.get(ticker, {})
@@ -385,20 +410,23 @@ def main():
                         our_bid = round(our_bid - vol_dev * 0.5, 2)
                         our_ask = round(our_ask + vol_dev * 0.5, 2)
 
-                    # Dynamic order size
+                    # Dynamic order size (constrained by API limits)
+                    remaining_headroom = max(0, limit_headroom - loop_gross_committed)
                     order_qty = compute_order_size(
-                        ticker, position, aggregate_exposure, max_exposure, tick_in_minute
+                        ticker, position, aggregate_exposure, max_exposure, tick_in_minute,
+                        remaining_headroom
                     )
 
-                    # Quote if headroom allows
-                    if aggregate_exposure + order_qty * 2 < max_exposure:
+                    # Quote if headroom allows (check both our calc AND API limits)
+                    if remaining_headroom >= order_qty and aggregate_exposure + order_qty * 2 < max_exposure:
                         place_order(ticker, "BUY", order_qty, our_bid)
                         place_order(ticker, "SELL", order_qty, our_ask)
+                        loop_gross_committed += order_qty  # worst case one side fills
                         our_spd = our_ask - our_bid
                         act = f"{GREEN}Q {order_qty:>5} @ {our_bid:.2f}/{our_ask:.2f} spd={our_spd:.2f} reb=${REBATES[ticker]:.3f}{RESET}"
                         actions.append(f"quote:{ticker}:{order_qty}:{our_bid:.2f}/{our_ask:.2f}")
                     else:
-                        act = f"{RED}at limit — skipped{RESET}"
+                        act = f"{RED}at limit — skipped (hdroom={remaining_headroom:.0f}){RESET}"
                         actions.append(f"skip:{ticker}")
 
                     pos_c = RED if abs(position) > 3000 else YELLOW if abs(position) > 1500 else GREEN
@@ -409,7 +437,7 @@ def main():
 
             # 4. Log
             log_tick(log_fh, tick, tick_in_minute, securities_data, quotes,
-                     aggregate_exposure, limits, actions)
+                     aggregate_exposure, api_gross, api_net, max_exposure, max_net, actions)
 
             # 5. Pace the loop (~0.25s target cycle)
             elapsed = time.time() - loop_start
