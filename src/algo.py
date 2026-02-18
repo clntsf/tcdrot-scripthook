@@ -45,13 +45,16 @@ EWMA_ALPHA = 0.3           # mid-price tracker decay
 STARTUP_THRESHOLD = 7
 
 # Close-out thresholds (tick within each 60-tick minute)
-UNWIND_LIMIT_START = 50
-UNWIND_AGGRESSIVE = 54
-UNWIND_MARKET = 57
+UNWIND_LIMIT_START = 53
+UNWIND_AGGRESSIVE = 55
+UNWIND_MARKET = 58
 
 # Post-news spread widening
 NEWS_WIDEN_TICKS = 5
 NEWS_SPREAD_MULT = 2.0
+
+# Overnight holding
+OVERNIGHT_GROSS_LIMIT = 9000
 
 # EWMA state
 ewma_mids = {t: None for t in TICKERS}
@@ -186,12 +189,14 @@ def compute_order_size(ticker, position, aggregate_exposure, max_exposure):
 # TIERED CLOSE-OUT
 # ════════════════════════════════════════════════════════════
 
-def handle_unwind(tick_in_minute, securities_data):
+def handle_unwind(tick_in_minute, securities_data, aggregate_exposure):
     """
     Tiered unwind before minute close:
-      45-49  passive limits (1/3 of position at best bid/ask)
-      50-56  aggressive limits (penny inside, full position)
+      50-53  passive limits (1/3 of position at best bid/ask)
+      54-56  aggressive limits (penny inside, full position)
       57-59  market orders (guarantee flat)
+    If aggregate exposure fits within OVERNIGHT_GROSS_LIMIT,
+    skip tickers with inverted or very wide books (cheaper to hold).
     Returns list of (ticker, action, qty, price_or_None).
     """
     orders = []
@@ -204,6 +209,12 @@ def handle_unwind(tick_in_minute, securities_data):
         best_bid = sec.get("bid")
         best_ask = sec.get("ask")
         if best_bid is None or best_ask is None:
+            continue
+
+        inverted = best_bid >= best_ask
+
+        # Hold overnight if within limit and book is inverted
+        if aggregate_exposure <= OVERNIGHT_GROSS_LIMIT and inverted:
             continue
 
         action = "SELL" if position > 0 else "BUY"
@@ -340,7 +351,7 @@ def main():
                 print(f"  {RED}{BOLD}[tick {tick} | t={tick_in_minute}] UNWIND ({phase}){RESET}"
                       f"  exp: {exp_c}{aggregate_exposure}/{max_exposure}{RESET}")
 
-                for ticker, action, qty, price in handle_unwind(tick_in_minute, securities_data):
+                for ticker, action, qty, price in handle_unwind(tick_in_minute, securities_data, aggregate_exposure):
                     # Split large orders into MAX_ORDER_SIZE chunks
                     remaining = qty
                     while remaining > 0:
@@ -363,6 +374,11 @@ def main():
 
                     if best_bid is None or best_ask is None:
                         print(f"    {ticker}: {YELLOW}no book{RESET}")
+                        continue
+
+                    if best_bid >= best_ask:
+                        print(f"    {ticker}: {YELLOW}inverted{RESET}")
+                        actions.append(f"skip:{ticker}:inverted")
                         continue
 
                     mid = (best_bid + best_ask) / 2
