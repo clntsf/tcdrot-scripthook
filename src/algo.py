@@ -37,7 +37,7 @@ MIN_HALF_SPREAD = {t: max(0.0, MARKET_FEE - REBATES[t]) + 0.01 for t in TICKERS}
 
 # ── Tuning parameters ──
 SKEW_FACTOR = 0.0001       # mid shift per unit of inventory
-BASE_ORDER_SIZE = 1000
+BASE_ORDER_SIZE = 1800
 MAX_ORDER_SIZE = 10000
 EWMA_ALPHA = 0.3           # mid-price tracker decay
 
@@ -426,7 +426,7 @@ def main():
             # # 5. Pace the loop (~0.25s target cycle)
             # elapsed = time.time() - loop_start
             # time.sleep(max(0.05, 0.25 - elapsed))
-            time.sleep(0.5)
+            time.sleep(0.05)
 
     except KeyboardInterrupt:
         print(f"\n  {BOLD}Shutting down.{RESET}")
