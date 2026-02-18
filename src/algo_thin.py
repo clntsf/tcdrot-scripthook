@@ -1,7 +1,8 @@
-"""RITC 2026 Algorithmic Market Making — THIN (no logging, no prints, max speed)"""
+"""RITC 2026 Algorithmic Market Making — THIN (parallel HTTP, max speed)"""
 
 import time
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 from os import getenv
 from pathlib import Path
@@ -19,11 +20,13 @@ TICKERS = ["SPNG", "SMMR", "ATMN", "WNTR"]
 MARKET_FEE = 0.02
 REBATES = {"SPNG": 0.01, "SMMR": 0.02, "ATMN": 0.015, "WNTR": 0.025}
 MIN_HALF_SPREAD = {t: max(0.0, MARKET_FEE - REBATES[t]) + 0.01 for t in TICKERS}
+REBATE_MULT = {t: 1.0 + (REBATES[t] - 0.01) / 0.01 for t in TICKERS}
 
 SKEW_FACTOR = 0.0001
 BASE_ORDER_SIZE = 1800
 MAX_ORDER_SIZE = 10000
 EWMA_ALPHA = 0.3
+EWMA_COMP = 1 - EWMA_ALPHA
 STARTUP_THRESHOLD = 7
 UNWIND_LIMIT_START = 53
 UNWIND_AGGRESSIVE = 55
@@ -31,91 +34,120 @@ UNWIND_MARKET = 58
 NEWS_WIDEN_TICKS = 5
 NEWS_SPREAD_MULT = 2.0
 OVERNIGHT_GROSS_LIMIT = 9000
-N_TICKERS = len(TICKERS)
+N_TICKERS = 4
 
-ewma_mids = {t: None for t in TICKERS}
+ewma_mids = [None, None, None, None]  # indexed by ticker order
+
+# Pre-build URLs to avoid f-string in hot loop
+URL_CANCEL = f"{BASE}/commands/cancel"
+URL_CASE = f"{BASE}/case"
+URL_SECURITIES = f"{BASE}/securities"
+URL_ORDERS = f"{BASE}/orders"
+
+# Thread pool for parallel HTTP — one session per thread
+thread_sessions = {}
+
+def get_session():
+    """Get or create a requests.Session for the current thread."""
+    import threading
+    tid = threading.current_thread().ident
+    if tid not in thread_sessions:
+        sess = requests.Session()
+        sess.headers.update({"X-API-key": API_KEY})
+        thread_sessions[tid] = sess
+    return thread_sessions[tid]
 
 
-# ── API (inlined for speed) ──
+def _cancel():
+    get_session().post(URL_CANCEL, params={"all": 1})
 
-def fetch_tick():
-    r = s.get(f"{BASE}/case")
+def _fetch_case():
+    r = get_session().get(URL_CASE)
     if r.ok:
         c = r.json()
         return c["tick"], c["status"]
     return 0, "STOPPED"
 
-
-def fetch_securities():
-    r = s.get(f"{BASE}/securities")
+def _fetch_securities():
+    r = get_session().get(URL_SECURITIES)
     if not r.ok:
-        return {}
+        return None
     return {
         sec["ticker"]: (sec.get("bid"), sec.get("ask"), sec.get("position", 0))
         for sec in r.json()
     }
 
+def _post_order(params):
+    get_session().post(URL_ORDERS, params=params)
 
-def fetch_gross_limit():
+
+def main():
+    pool = ThreadPoolExecutor(max_workers=12)
+
+    # Wait for case
+    tick, status = _fetch_case()
+    while status != "ACTIVE":
+        time.sleep(1)
+        tick, status = _fetch_case()
+
+    # Fetch limits once
     r = s.get(f"{BASE}/limits")
+    max_exp = 15000
     if r.ok:
         lims = r.json()
         if lims:
-            return lims[0].get("gross_limit", 15000)
-    return 15000
+            max_exp = lims[0].get("gross_limit", 15000)
+    inv_max_exp = 1.0 / max_exp if max_exp else 1.0
+    per_ticker_max = max_exp / N_TICKERS
 
-
-# ── Core logic (no allocations, no string formatting) ──
-
-def main():
-    # Wait for case
-    tick, status = fetch_tick()
-    while status != "ACTIVE":
-        time.sleep(1)
-        tick, status = fetch_tick()
-
-    max_exp = fetch_gross_limit()
     cycle_times = []
 
     try:
         while True:
             t0 = time.perf_counter()
 
-            # Cancel all
-            s.post(f"{BASE}/commands/cancel", params={"all": 1})
+            # ── Batch 1: cancel + case + securities in parallel ──
+            f_cancel = pool.submit(_cancel)
+            f_case = pool.submit(_fetch_case)
+            f_secs = pool.submit(_fetch_securities)
 
-            # Fetch state
-            tick, status = fetch_tick()
+            tick, status = f_case.result()
             if status != "ACTIVE":
                 break
-            secs = fetch_securities()
+            secs = f_secs.result()
+            f_cancel.result()  # ensure cancel completed
+
+            if not secs:
+                cycle_times.append(time.perf_counter() - t0)
+                continue
 
             t_min = tick % 60
 
             # Aggregate exposure
             agg = 0
-            for t in TICKERS:
-                d = secs.get(t)
+            for i in range(N_TICKERS):
+                d = secs.get(TICKERS[i])
                 if d:
                     agg += abs(d[2])
 
-            # Freeze zone
+            # Freeze zone — nothing to do
             if t_min < STARTUP_THRESHOLD:
                 cycle_times.append(time.perf_counter() - t0)
                 continue
 
-            # Unwind zone
+            # ── Batch 2: compute + fire all orders in parallel ──
+            order_futures = []
+
             if t_min >= UNWIND_LIMIT_START:
-                for ticker in TICKERS:
-                    d = secs.get(ticker)
+                # Unwind zone
+                for i in range(N_TICKERS):
+                    d = secs.get(TICKERS[i])
                     if not d:
                         continue
                     bid, ask, pos = d
                     if pos == 0 or bid is None or ask is None:
                         continue
-
-                    inverted = bid >= ask
-                    if agg <= OVERNIGHT_GROSS_LIMIT and inverted:
+                    if bid >= ask and agg <= OVERNIGHT_GROSS_LIMIT:
                         continue
 
                     action = "SELL" if pos > 0 else "BUY"
@@ -125,94 +157,95 @@ def main():
                         remaining = abs_pos
                         while remaining > 0:
                             chunk = min(remaining, MAX_ORDER_SIZE)
-                            s.post(f"{BASE}/orders", params={
-                                "ticker": ticker, "type": "MARKET",
+                            order_futures.append(pool.submit(_post_order, {
+                                "ticker": TICKERS[i], "type": "MARKET",
                                 "quantity": chunk, "action": action,
-                            })
+                            }))
                             remaining -= chunk
                     elif t_min >= UNWIND_AGGRESSIVE:
                         price = round((bid + 0.01) if action == "SELL" else (ask - 0.01), 2)
                         remaining = abs_pos
                         while remaining > 0:
                             chunk = min(remaining, MAX_ORDER_SIZE)
-                            s.post(f"{BASE}/orders", params={
-                                "ticker": ticker, "type": "LIMIT",
-                                "quantity": chunk, "action": action,
-                                "price": price,
-                            })
+                            order_futures.append(pool.submit(_post_order, {
+                                "ticker": TICKERS[i], "type": "LIMIT",
+                                "quantity": chunk, "action": action, "price": price,
+                            }))
                             remaining -= chunk
                     else:
-                        qty = max(100, abs_pos // 3)
+                        qty = min(max(100, abs_pos // 3), MAX_ORDER_SIZE)
                         price = round(bid if action == "SELL" else ask, 2)
-                        s.post(f"{BASE}/orders", params={
+                        order_futures.append(pool.submit(_post_order, {
+                            "ticker": TICKERS[i], "type": "LIMIT",
+                            "quantity": qty, "action": action, "price": price,
+                        }))
+            else:
+                # Quoting zone
+                for i in range(N_TICKERS):
+                    d = secs.get(TICKERS[i])
+                    if not d:
+                        continue
+                    bid, ask, pos = d
+                    if bid is None or ask is None or bid >= ask:
+                        continue
+
+                    mid = (bid + ask) * 0.5
+                    market_half = (ask - bid) * 0.5
+                    ticker = TICKERS[i]
+
+                    # EWMA inline
+                    prev = ewma_mids[i]
+                    if prev is None:
+                        ewma_mids[i] = mid
+                        vol_dev = 0.0
+                    else:
+                        ewma_mids[i] = EWMA_ALPHA * mid + EWMA_COMP * prev
+                        vol_dev = abs(mid - ewma_mids[i])
+
+                    # Skewed quotes
+                    skewed_mid = mid - SKEW_FACTOR * pos
+                    half_spread = max(MIN_HALF_SPREAD[ticker], market_half - 0.01)
+                    if t_min < NEWS_WIDEN_TICKS:
+                        half_spread *= NEWS_SPREAD_MULT
+
+                    our_bid = round(skewed_mid - half_spread, 2)
+                    our_ask = round(skewed_mid + half_spread, 2)
+                    our_bid = min(our_bid, round(ask - 0.01, 2))
+                    our_ask = max(our_ask, round(bid + 0.01, 2))
+
+                    if vol_dev > 0.10:
+                        adj = round(vol_dev * 0.5, 2)
+                        our_bid = round(our_bid - adj, 2)
+                        our_ask = round(our_ask + adj, 2)
+
+                    # Order size
+                    headroom = max(0, max_exp - agg)
+                    size = min(BASE_ORDER_SIZE, headroom * 0.25)  # /N_TICKERS
+                    if per_ticker_max > 0:
+                        size *= max(0.1, 1.0 - abs(pos) / per_ticker_max)
+                    size *= REBATE_MULT[ticker]
+                    qty = max(100, min(int(size), MAX_ORDER_SIZE))
+
+                    if agg + qty * 2 < max_exp:
+                        order_futures.append(pool.submit(_post_order, {
                             "ticker": ticker, "type": "LIMIT",
-                            "quantity": min(qty, MAX_ORDER_SIZE), "action": action,
-                            "price": price,
-                        })
+                            "quantity": qty, "action": "BUY", "price": our_bid,
+                        }))
+                        order_futures.append(pool.submit(_post_order, {
+                            "ticker": ticker, "type": "LIMIT",
+                            "quantity": qty, "action": "SELL", "price": our_ask,
+                        }))
 
-                cycle_times.append(time.perf_counter() - t0)
-                continue
-
-            # Quoting zone
-            for ticker in TICKERS:
-                d = secs.get(ticker)
-                if not d:
-                    continue
-                bid, ask, pos = d
-                if bid is None or ask is None or bid >= ask:
-                    continue
-
-                mid = (bid + ask) * 0.5
-                market_half = (ask - bid) * 0.5
-
-                # EWMA
-                prev = ewma_mids[ticker]
-                if prev is None:
-                    ewma_mids[ticker] = mid
-                    vol_dev = 0.0
-                else:
-                    ewma_mids[ticker] = EWMA_ALPHA * mid + (1 - EWMA_ALPHA) * prev
-                    vol_dev = abs(mid - ewma_mids[ticker])
-
-                # Skewed quotes
-                skewed_mid = mid - SKEW_FACTOR * pos
-                half_spread = max(MIN_HALF_SPREAD[ticker], market_half - 0.01)
-                if t_min < NEWS_WIDEN_TICKS:
-                    half_spread *= NEWS_SPREAD_MULT
-
-                our_bid = round(skewed_mid - half_spread, 2)
-                our_ask = round(skewed_mid + half_spread, 2)
-                our_bid = min(our_bid, round(ask - 0.01, 2))
-                our_ask = max(our_ask, round(bid + 0.01, 2))
-
-                if vol_dev > 0.10:
-                    adj = round(vol_dev * 0.5, 2)
-                    our_bid = round(our_bid - adj, 2)
-                    our_ask = round(our_ask + adj, 2)
-
-                # Order size
-                headroom = max(0, max_exp - agg)
-                size = min(BASE_ORDER_SIZE, headroom / N_TICKERS)
-                per_ticker_max = max_exp / N_TICKERS
-                if per_ticker_max > 0:
-                    size *= max(0.1, 1.0 - abs(pos) / per_ticker_max)
-                size *= 1.0 + (REBATES[ticker] - 0.01) / 0.01
-                qty = max(100, min(int(size), MAX_ORDER_SIZE))
-
-                if agg + qty * 2 < max_exp:
-                    s.post(f"{BASE}/orders", params={
-                        "ticker": ticker, "type": "LIMIT",
-                        "quantity": qty, "action": "BUY", "price": our_bid,
-                    })
-                    s.post(f"{BASE}/orders", params={
-                        "ticker": ticker, "type": "LIMIT",
-                        "quantity": qty, "action": "SELL", "price": our_ask,
-                    })
+            # Wait for all orders to land before next cycle
+            for f in order_futures:
+                f.result()
 
             cycle_times.append(time.perf_counter() - t0)
 
     except KeyboardInterrupt:
         pass
+    finally:
+        pool.shutdown(wait=False)
 
     # Report
     if cycle_times:
