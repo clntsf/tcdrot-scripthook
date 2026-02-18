@@ -1,8 +1,10 @@
 """RITC 2026 Algorithmic Market Making — THIN (parallel HTTP, max speed)"""
 
+import os
 import time
 import requests
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from dotenv import load_dotenv
 from os import getenv
 from pathlib import Path
@@ -19,11 +21,11 @@ s.headers.update({"X-API-key": API_KEY})
 TICKERS = ["SPNG", "SMMR", "ATMN", "WNTR"]
 MARKET_FEE = 0.02
 REBATES = {"SPNG": 0.01, "SMMR": 0.02, "ATMN": 0.015, "WNTR": 0.025}
-MIN_HALF_SPREAD = {t: max(0.0, MARKET_FEE - REBATES[t]) + 0.01 for t in TICKERS}
+MIN_HALF_SPREAD = {t: max(0.0, MARKET_FEE - REBATES[t]) + 0.02 for t in TICKERS}
 REBATE_MULT = {t: 1.0 + (REBATES[t] - 0.01) / 0.01 for t in TICKERS}
 
-SKEW_FACTOR = 0.0001
-BASE_ORDER_SIZE = 1800
+SKEW_FACTOR = 0.0003
+BASE_ORDER_SIZE = 3500
 MAX_ORDER_SIZE = 10000
 EWMA_ALPHA = 0.3
 EWMA_COMP = 1 - EWMA_ALPHA
@@ -100,6 +102,13 @@ def main():
     inv_max_exp = 1.0 / max_exp if max_exp else 1.0
     per_ticker_max = max_exp / N_TICKERS
 
+    # Open log file
+    log_dir = Path(__file__).parent.parent / "logs"
+    os.makedirs(log_dir, exist_ok=True)
+    log_path = log_dir / f"{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+    log_fh = open(log_path, "w")
+    log_fh.write("tick|t_min|agg_exp|" + "|".join(f"{t}:pos,bid,ask" for t in TICKERS) + "|actions\n")
+
     cycle_times = []
 
     try:
@@ -132,11 +141,15 @@ def main():
 
             # Freeze zone — nothing to do
             if t_min < STARTUP_THRESHOLD:
+                log_fh.write(f"{tick}|{t_min}|{agg}|" + "|".join(
+                    f"{secs.get(t, (0,0,0))[2]},{secs.get(t, (0,0,0))[0]},{secs.get(t, (0,0,0))[1]}"
+                    for t in TICKERS) + "|freeze\n")
                 cycle_times.append(time.perf_counter() - t0)
                 continue
 
             # ── Batch 2: compute + fire all orders in parallel ──
             order_futures = []
+            actions = []
 
             if t_min >= UNWIND_LIMIT_START:
                 # Unwind zone
@@ -153,32 +166,36 @@ def main():
                     action = "SELL" if pos > 0 else "BUY"
                     abs_pos = int(abs(pos))
 
+                    ticker = TICKERS[i]
                     if t_min >= UNWIND_MARKET:
                         remaining = abs_pos
                         while remaining > 0:
                             chunk = min(remaining, MAX_ORDER_SIZE)
                             order_futures.append(pool.submit(_post_order, {
-                                "ticker": TICKERS[i], "type": "MARKET",
+                                "ticker": ticker, "type": "MARKET",
                                 "quantity": chunk, "action": action,
                             }))
                             remaining -= chunk
+                        actions.append(f"unwind:{ticker}:{action}:{abs_pos}:MKT")
                     elif t_min >= UNWIND_AGGRESSIVE:
                         price = round((bid + 0.01) if action == "SELL" else (ask - 0.01), 2)
                         remaining = abs_pos
                         while remaining > 0:
                             chunk = min(remaining, MAX_ORDER_SIZE)
                             order_futures.append(pool.submit(_post_order, {
-                                "ticker": TICKERS[i], "type": "LIMIT",
+                                "ticker": ticker, "type": "LIMIT",
                                 "quantity": chunk, "action": action, "price": price,
                             }))
                             remaining -= chunk
+                        actions.append(f"unwind:{ticker}:{action}:{abs_pos}:LMT@{price}")
                     else:
                         qty = min(max(100, abs_pos // 3), MAX_ORDER_SIZE)
                         price = round(bid if action == "SELL" else ask, 2)
                         order_futures.append(pool.submit(_post_order, {
-                            "ticker": TICKERS[i], "type": "LIMIT",
+                            "ticker": ticker, "type": "LIMIT",
                             "quantity": qty, "action": action, "price": price,
                         }))
+                        actions.append(f"unwind:{ticker}:{action}:{qty}:LMT@{price}")
             else:
                 # Quoting zone
                 for i in range(N_TICKERS):
@@ -227,14 +244,30 @@ def main():
                     qty = max(100, min(int(size), MAX_ORDER_SIZE))
 
                     if agg + qty * 2 < max_exp:
+                        # Asymmetric sizing: bigger on the side that flattens inventory
+                        if pos > 0:
+                            # Long → want to sell more, buy less
+                            buy_qty = max(100, int(qty * 0.5))
+                            sell_qty = qty
+                        elif pos < 0:
+                            # Short → want to buy more, sell less
+                            buy_qty = qty
+                            sell_qty = max(100, int(qty * 0.5))
+                        else:
+                            buy_qty = qty
+                            sell_qty = qty
+
                         order_futures.append(pool.submit(_post_order, {
                             "ticker": ticker, "type": "LIMIT",
-                            "quantity": qty, "action": "BUY", "price": our_bid,
+                            "quantity": buy_qty, "action": "BUY", "price": our_bid,
                         }))
                         order_futures.append(pool.submit(_post_order, {
                             "ticker": ticker, "type": "LIMIT",
-                            "quantity": qty, "action": "SELL", "price": our_ask,
+                            "quantity": sell_qty, "action": "SELL", "price": our_ask,
                         }))
+                        actions.append(f"quote:{ticker}:{buy_qty}/{sell_qty}:{our_bid}/{our_ask}")
+                    else:
+                        actions.append(f"skip:{ticker}")
 
             # Wait for all orders to land before next cycle
             for f in order_futures:
