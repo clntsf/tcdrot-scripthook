@@ -41,9 +41,12 @@ BASE_ORDER_SIZE = 1000
 MAX_ORDER_SIZE = 10000
 EWMA_ALPHA = 0.3           # mid-price tracker decay
 
+# Start-up threshold (ease into the position)
+STARTUP_THRESHOLD = 7
+
 # Close-out thresholds (tick within each 60-tick minute)
-UNWIND_LIMIT_START = 45
-UNWIND_AGGRESSIVE = 50
+UNWIND_LIMIT_START = 50
+UNWIND_AGGRESSIVE = 54
 UNWIND_MARKET = 57
 
 # Post-news spread widening
@@ -326,8 +329,11 @@ def main():
             actions = []
             quotes = {}  # for logging
 
+            # literally do nothing first n ticks to not be eaten alive
+            if tick_in_minute < STARTUP_THRESHOLD:
+                pass
             # 3. UNWIND or QUOTE
-            if tick_in_minute >= UNWIND_LIMIT_START:
+            elif tick_in_minute >= UNWIND_LIMIT_START:
                 phase = ("MKT" if tick_in_minute >= UNWIND_MARKET
                          else "AGG" if tick_in_minute >= UNWIND_AGGRESSIVE
                          else "LMT")
@@ -401,9 +407,10 @@ def main():
             log_tick(log_fh, tick, tick_in_minute, securities_data, quotes,
                      aggregate_exposure, limits, actions)
 
-            # 5. Pace the loop (~0.25s target cycle)
-            elapsed = time.time() - loop_start
-            time.sleep(max(0.05, 0.25 - elapsed))
+            # # 5. Pace the loop (~0.25s target cycle)
+            # elapsed = time.time() - loop_start
+            # time.sleep(max(0.05, 0.25 - elapsed))
+            time.sleep(0.5)
 
     except KeyboardInterrupt:
         print(f"\n  {BOLD}Shutting down.{RESET}")
