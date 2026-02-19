@@ -32,32 +32,45 @@ TICKERS = ["SPNG", "SMMR", "ATMN", "WNTR"]
 MARKET_FEE = 0.02
 
 REBATES = {"SPNG": 0.01, "SMMR": 0.02, "ATMN": 0.015, "WNTR": 0.025}
-MIN_HALF_SPREAD = {t: max(0.0, MARKET_FEE - REBATES[t]) + 0.01 for t in TICKERS}
-# SPNG: 0.02, SMMR: 0.01, ATMN: 0.015, WNTR: 0.01
+MIN_HALF_SPREAD = {t: max(0.0, MARKET_FEE - REBATES[t]) + 0.03 for t in TICKERS}
+# SPNG: 0.04, SMMR: 0.03, ATMN: 0.035, WNTR: 0.03
+# Wider than before (+0.02) — tight quotes were getting adversely selected
 
 # ── Tuning parameters ──
-SKEW_FACTOR = 0.0001       # mid shift per unit of inventory
-BASE_ORDER_SIZE = 1800
-MAX_ORDER_SIZE = 10000
+SKEW_FACTOR = 0.0005       # mid shift per unit of inventory (aggressive mean-reversion)
+BASE_ORDER_SIZE = 1500     # down from 3000 — large fills get adversely selected
+MAX_ORDER_SIZE = 5000      # down from 10000 — cap any single order
+MAX_PER_TICKER = 1500      # hard cap per-ticker position (was 2500, positions still too large)
+LIMIT_SAFETY_PCT = 0.90    # only use 90% of gross/net limits (10% buffer for fines)
 EWMA_ALPHA = 0.3           # mid-price tracker decay
 
 # Start-up threshold (ease into the position)
 STARTUP_THRESHOLD = 7
 
 # Close-out thresholds (tick within each 60-tick minute)
-UNWIND_LIMIT_START = 53
-UNWIND_AGGRESSIVE = 55
-UNWIND_MARKET = 58
+UNWIND_LIMIT_START = 48    # start unwinding earlier (was 50) — give more time given inverted books
+UNWIND_AGGRESSIVE = 52
+UNWIND_MARKET = 56         # market orders 1 tick earlier to handle inverted books
 
-# Post-news spread widening
-NEWS_WIDEN_TICKS = 5
-NEWS_SPREAD_MULT = 2.0
+# Post-news behaviour — first 15 ticks cause 87% of losses
+NEWS_WIDEN_TICKS = 10      # up from 3 — data shows first 15 ticks are dangerous
+NEWS_SPREAD_MULT = 3.0     # much wider during news — informed traders are picking us off
+NEWS_SIZE_MULT = 0.15      # down from 0.3 — only 15% size during news (was still getting 3k+ fills)
 
-# Overnight holding
-OVERNIGHT_GROSS_LIMIT = 9000
+# Mid-period caution — t_min 20-35 showed worst adverse selection in logs
+MID_PERIOD_START = 20
+MID_PERIOD_END = 35
+MID_PERIOD_SPREAD_MULT = 1.5   # widen spread 50% during mid-period
+MID_PERIOD_SIZE_MULT = 0.6     # reduce size 40% during mid-period
 
 # EWMA state
 ewma_mids = {t: None for t in TICKERS}
+
+# Momentum state — track recent mid-price changes for trend detection
+mid_history = {t: [] for t in TICKERS}
+MOMENTUM_LOOKBACK = 5       # ticks to measure trend over
+MOMENTUM_THRESHOLD = 0.03   # min price move to count as trending ($0.03)
+MOMENTUM_SKEW = 0.5         # extra half-spread added to against-trend side
 
 
 # ════════════════════════════════════════════════════════════
@@ -95,6 +108,14 @@ def fetch_limits():
     """GET /limits → list of limit dicts."""
     resp = s.get(f"{BASE}/limits")
     return resp.json() if resp.ok else []
+
+
+def fetch_nlv():
+    """GET /trader → net liquid value (PnL proxy)."""
+    resp = s.get(f"{BASE}/trader")
+    if resp.ok:
+        return resp.json().get("nlv", 0.0)
+    return 0.0
 
 
 def cancel_all_orders():
@@ -137,9 +158,20 @@ def update_ewma(ticker, current_mid):
     return abs(current_mid - ewma_mids[ticker])
 
 
+def compute_momentum(ticker, current_mid):
+    """Track recent mid-price changes and return trend direction.
+    Returns: positive = trending up, negative = trending down, 0 = no trend."""
+    mid_history[ticker].append(current_mid)
+    if len(mid_history[ticker]) > MOMENTUM_LOOKBACK + 1:
+        mid_history[ticker] = mid_history[ticker][-(MOMENTUM_LOOKBACK + 1):]
+    if len(mid_history[ticker]) < 3:
+        return 0.0
+    return current_mid - mid_history[ticker][0]
+
+
 def compute_skewed_quotes(ticker, best_bid, best_ask, position, tick_in_minute):
     """
-    Inventory-skewed quoting with penny improvement,
+    Inventory-skewed quoting with trend awareness,
     news widening, and minimum profitable spread.
     """
     mid = (best_bid + best_ask) / 2
@@ -148,15 +180,32 @@ def compute_skewed_quotes(ticker, best_bid, best_ask, position, tick_in_minute):
     # Inventory skew: if long, lower mid → more aggressive sell
     skewed_mid = mid - SKEW_FACTOR * position
 
-    # Half-spread: penny-improve the market, but enforce minimum
-    half_spread = max(MIN_HALF_SPREAD[ticker], market_half - 0.01)
+    # Half-spread: match the market or use minimum, whichever is wider
+    half_spread = max(MIN_HALF_SPREAD[ticker], market_half)
 
     # Widen after news (first ticks of each minute)
     if tick_in_minute < NEWS_WIDEN_TICKS:
         half_spread *= NEWS_SPREAD_MULT
+    # Mid-period caution — informed traders still active
+    elif MID_PERIOD_START <= tick_in_minute <= MID_PERIOD_END:
+        half_spread *= MID_PERIOD_SPREAD_MULT
 
-    our_bid = round(skewed_mid - half_spread, 2)
-    our_ask = round(skewed_mid + half_spread, 2)
+    # Momentum-aware asymmetric spread: widen the side that's against the trend
+    momentum = compute_momentum(ticker, mid)
+    bid_extra = 0.0
+    ask_extra = 0.0
+    if abs(momentum) > MOMENTUM_THRESHOLD:
+        if momentum > 0:
+            # Price trending UP → our sells are getting picked off
+            # Widen ask (sell side), tighten bid (buy side)
+            ask_extra = MOMENTUM_SKEW * min(abs(momentum), 0.20)
+        else:
+            # Price trending DOWN → our buys are getting picked off
+            # Widen bid (buy side), tighten ask (sell side)
+            bid_extra = MOMENTUM_SKEW * min(abs(momentum), 0.20)
+
+    our_bid = round(skewed_mid - half_spread - bid_extra, 2)
+    our_ask = round(skewed_mid + half_spread + ask_extra, 2)
 
     # Safety: never quote through the market
     our_bid = min(our_bid, best_ask - 0.01)
@@ -165,22 +214,52 @@ def compute_skewed_quotes(ticker, best_bid, best_ask, position, tick_in_minute):
     return our_bid, our_ask
 
 
-def compute_order_size(ticker, position, aggregate_exposure, max_exposure):
+def compute_safe_limit(gross, net, gross_limit, net_limit):
+    """
+    Return the max order qty we can safely place on one side,
+    respecting both gross and net limits with safety buffer.
+    """
+    safe_gross = gross_limit * LIMIT_SAFETY_PCT
+    safe_net = net_limit * LIMIT_SAFETY_PCT
+    gross_headroom = max(0, safe_gross - gross)
+    net_headroom = max(0, safe_net - abs(net))
+    return min(gross_headroom, net_headroom)
+
+
+def compute_order_size(ticker, position, aggregate_exposure, max_exposure, tick_in_minute,
+                       limit_headroom):
     """
     Dynamic sizing: scales with headroom, decays with inventory,
-    boosts for higher-rebate tickers.
+    boosts for higher-rebate tickers, reduces during news.
+    Now also constrained by actual API limit headroom.
     """
+    # Start from the lesser of our desired size and what limits allow
+    per_ticker_headroom = limit_headroom / max(1, len(TICKERS))
     headroom = max(0, max_exposure - aggregate_exposure)
     per_ticker = headroom / len(TICKERS)
-    size = min(BASE_ORDER_SIZE, per_ticker)
+    size = min(BASE_ORDER_SIZE, per_ticker, per_ticker_headroom)
 
     # Reduce as per-ticker inventory grows
     per_ticker_max = max_exposure / len(TICKERS)
     if per_ticker_max > 0:
         size *= max(0.1, 1.0 - abs(position) / per_ticker_max)
 
-    # Rebate boost (normalised to SPNG baseline)
-    size *= 1.0 + (REBATES[ticker] - 0.01) / 0.01
+    # Hard cap: don't add to a position that's already at per-ticker limit
+    if abs(position) >= MAX_PER_TICKER:
+        size *= 0.1  # minimal quoting only
+
+    # Mild rebate boost (capped at 1.5x to avoid outsized adverse selection targets)
+    # BUT not during news — informed traders target high-rebate tickers
+    if tick_in_minute >= NEWS_WIDEN_TICKS:
+        size *= min(1.5, 1.0 + (REBATES[ticker] - 0.01) / 0.02)
+
+    # Post-news caution: smaller size for first few ticks after minute boundary
+    # Applied AFTER rebate boost is skipped, so all tickers get uniform reduction
+    if tick_in_minute < NEWS_WIDEN_TICKS:
+        size *= NEWS_SIZE_MULT
+    # Mid-period: reduce size where adverse selection is worst
+    elif MID_PERIOD_START <= tick_in_minute <= MID_PERIOD_END:
+        size *= MID_PERIOD_SIZE_MULT
 
     return max(100, min(int(size), MAX_ORDER_SIZE))
 
@@ -208,19 +287,16 @@ def handle_unwind(tick_in_minute, securities_data, aggregate_exposure):
 
         best_bid = sec.get("bid")
         best_ask = sec.get("ask")
-        if best_bid is None or best_ask is None:
-            continue
-
-        inverted = best_bid >= best_ask
-
-        # Hold overnight if within limit and book is inverted
-        if aggregate_exposure <= OVERNIGHT_GROSS_LIMIT and inverted:
+        if not best_bid or not best_ask or best_bid <= 0 or best_ask <= 0:
             continue
 
         action = "SELL" if position > 0 else "BUY"
         abs_pos = abs(position)
 
-        if tick_in_minute >= UNWIND_MARKET:
+        # If book is inverted/stale, go straight to market orders
+        if best_bid >= best_ask:
+            orders.append((ticker, action, abs_pos, None))
+        elif tick_in_minute >= UNWIND_MARKET:
             orders.append((ticker, action, abs_pos, None))
         elif tick_in_minute >= UNWIND_AGGRESSIVE:
             price = (best_bid + 0.01) if action == "SELL" else (best_ask - 0.01)
@@ -244,25 +320,17 @@ def open_log():
     log_path = log_dir / f"{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
     fh = open(log_path, "w")
     # Header line
-    fh.write("tick|t_min|agg_exp|gross|net|gross_lim|net_lim|"
+    fh.write("tick|t_min|agg_exp|gross|net|gross_lim|net_lim|nlv|"
              + "|".join(f"{t}:pos,bid,ask,our_bid,our_ask,qty" for t in TICKERS)
              + "|actions\n")
     return fh, log_path
 
 
 def log_tick(fh, tick, tick_in_minute, securities_data, quotes, aggregate_exposure,
-             limits, actions):
+             api_gross, api_net, gross_lim, net_lim, nlv, actions):
     """Write one structured line per tick."""
-    gross = net = gross_lim = net_lim = 0
-    if limits:
-        lim = limits[0]
-        gross = lim.get("gross", 0)
-        net = lim.get("net", 0)
-        gross_lim = lim.get("gross_limit", 0)
-        net_lim = lim.get("net_limit", 0)
-
     parts = [str(tick), str(tick_in_minute), str(aggregate_exposure),
-             f"{gross}", f"{net}", f"{gross_lim}", f"{net_lim}"]
+             f"{api_gross}", f"{api_net}", f"{gross_lim}", f"{net_lim}", f"{nlv:.2f}"]
 
     for t in TICKERS:
         sec = securities_data.get(t, {})
@@ -295,14 +363,20 @@ def main():
         time.sleep(1)
         tick, status, _tpp = fetch_tick()
 
-    # Read limits from API
+    # Read limits from API (fixed for entire trial)
     limits = fetch_limits()
-    max_exposure = limits[0].get("gross_limit", 15000) if limits else 15000
+    if limits:
+        lim = limits[0]
+        max_exposure = lim.get("gross_limit", 15000)
+        max_net = lim.get("net_limit", 30000)
+    else:
+        max_exposure = 15000
+        max_net = 30000
 
     # Setup logging
     log_fh, log_path = open_log()
 
-    print(f"  max_exposure={max_exposure} (from API)")
+    print(f"  gross_limit={max_exposure}, net_limit={max_net} (from API)")
     print(f"  Tickers: {', '.join(TICKERS)}")
     print(f"  Rebates: { {t: f'${v:.3f}' for t, v in REBATES.items()} }")
     print(f"  Log: {log_path}")
@@ -316,20 +390,29 @@ def main():
             # 1. Cancel all outstanding orders
             cancel_all_orders()
 
-            # 2. Fetch state (3 API calls total)
+            # 2. Fetch state (3 API calls — limits are fixed per trial)
             tick, status, _tpp = fetch_tick()
             if status != "ACTIVE":
                 break
             securities_data = fetch_all_securities()
-            limits = fetch_limits()
-            if limits:
-                max_exposure = limits[0].get("gross_limit", max_exposure)
+            nlv = fetch_nlv()
 
             aggregate_exposure = compute_aggregate_exposure(securities_data)
             tick_in_minute = tick % 60
 
-            # Exposure display
-            exposure_pct = (aggregate_exposure / max_exposure * 100) if max_exposure else 0
+            # Reset momentum history at minute boundaries (news resets trends)
+            if tick_in_minute == 0:
+                for t in TICKERS:
+                    mid_history[t].clear()
+
+            # Compute current gross/net from positions (sum |pos| and sum pos)
+            api_gross = sum(abs(securities_data.get(t, {}).get("position", 0)) for t in TICKERS)
+            api_net = sum(securities_data.get(t, {}).get("position", 0) for t in TICKERS)
+
+            limit_headroom = compute_safe_limit(api_gross, api_net, max_exposure, max_net)
+
+            # Exposure display (use API gross as source of truth)
+            exposure_pct = (api_gross / max_exposure * 100) if max_exposure else 0
             if exposure_pct >= 90:
                 exp_c = RED
             elif exposure_pct >= 70:
@@ -348,8 +431,11 @@ def main():
                 phase = ("MKT" if tick_in_minute >= UNWIND_MARKET
                          else "AGG" if tick_in_minute >= UNWIND_AGGRESSIVE
                          else "LMT")
+                nlv_c = GREEN if nlv >= 0 else RED
                 print(f"  {RED}{BOLD}[tick {tick} | t={tick_in_minute}] UNWIND ({phase}){RESET}"
-                      f"  exp: {exp_c}{aggregate_exposure}/{max_exposure}{RESET}")
+                      f"  gross: {exp_c}{api_gross:.0f}/{max_exposure}{RESET}"
+                      f"  net: {api_net:.0f}/{max_net}"
+                      f"  {BOLD}nlv: {nlv_c}${nlv:+,.0f}{RESET}")
 
                 for ticker, action, qty, price in handle_unwind(tick_in_minute, securities_data, aggregate_exposure):
                     # Split large orders into MAX_ORDER_SIZE chunks
@@ -363,8 +449,16 @@ def main():
                     actions.append(f"unwind:{ticker}:{action}:{qty}:{tag}")
 
             else:
+                net_pct = (abs(api_net) / max_net * 100) if max_net else 0
+                net_c = RED if net_pct >= 90 else YELLOW if net_pct >= 70 else GREEN
+                nlv_c = GREEN if nlv >= 0 else RED
                 print(f"  {DIM}[tick {tick} | t={tick_in_minute}]{RESET}"
-                      f"  exp: {exp_c}{aggregate_exposure}/{max_exposure} ({exposure_pct:.0f}%){RESET}")
+                      f"  gross: {exp_c}{api_gross:.0f}/{max_exposure} ({exposure_pct:.0f}%){RESET}"
+                      f"  net: {net_c}{api_net:.0f}/{max_net} ({net_pct:.0f}%){RESET}"
+                      f"  {BOLD}nlv: {nlv_c}${nlv:+,.0f}{RESET}")
+
+                # Track cumulative orders this loop so later tickers account for earlier ones
+                loop_gross_committed = 0
 
                 for ticker in TICKERS:
                     sec = securities_data.get(ticker, {})
@@ -372,13 +466,11 @@ def main():
                     best_ask = sec.get("ask")
                     position = sec.get("position", 0)
 
-                    if best_bid is None or best_ask is None:
-                        print(f"    {ticker}: {YELLOW}no book{RESET}")
+                    if not best_bid or not best_ask or best_bid <= 0 or best_ask <= 0:
+                        print(f"    {ticker}: {YELLOW}no book (bid={best_bid} ask={best_ask}){RESET}")
                         continue
-
                     if best_bid >= best_ask:
-                        print(f"    {ticker}: {YELLOW}inverted{RESET}")
-                        actions.append(f"skip:{ticker}:inverted")
+                        print(f"    {ticker}: {YELLOW}inverted book (bid={best_bid:.2f} >= ask={best_ask:.2f}){RESET}")
                         continue
 
                     mid = (best_bid + best_ask) / 2
@@ -397,36 +489,41 @@ def main():
                         our_bid = round(our_bid - vol_dev * 0.5, 2)
                         our_ask = round(our_ask + vol_dev * 0.5, 2)
 
-                    # Dynamic order size
+                    # Dynamic order size (constrained by API limits)
+                    remaining_headroom = max(0, limit_headroom - loop_gross_committed)
                     order_qty = compute_order_size(
-                        ticker, position, aggregate_exposure, max_exposure
+                        ticker, position, aggregate_exposure, max_exposure, tick_in_minute,
+                        remaining_headroom
                     )
 
-                    # Quote if headroom allows
-                    if aggregate_exposure + order_qty * 2 < max_exposure:
-                        place_order(ticker, "BUY", order_qty, our_bid)
-                        place_order(ticker, "SELL", order_qty, our_ask)
+                    # Quote if headroom allows (check both our calc AND API limits)
+                    if remaining_headroom >= order_qty and aggregate_exposure + order_qty * 2 < max_exposure:
+                        # Per-ticker position cap: only quote the side that reduces inventory
+                        skip_buy = position >= MAX_PER_TICKER
+                        skip_sell = position <= -MAX_PER_TICKER
+                        if not skip_buy:
+                            place_order(ticker, "BUY", order_qty, our_bid)
+                        if not skip_sell:
+                            place_order(ticker, "SELL", order_qty, our_ask)
+                        loop_gross_committed += order_qty  # worst case one side fills
                         our_spd = our_ask - our_bid
                         act = f"{GREEN}Q {order_qty:>5} @ {our_bid:.2f}/{our_ask:.2f} spd={our_spd:.2f} reb=${REBATES[ticker]:.3f}{RESET}"
                         actions.append(f"quote:{ticker}:{order_qty}:{our_bid:.2f}/{our_ask:.2f}")
                     else:
-                        act = f"{RED}at limit — skipped{RESET}"
+                        act = f"{RED}at limit — skipped (hdroom={remaining_headroom:.0f}){RESET}"
                         actions.append(f"skip:{ticker}")
 
-                    pos_c = RED if abs(position) > 2000 else YELLOW if abs(position) > 1000 else GREEN
+                    pos_c = RED if abs(position) > 3000 else YELLOW if abs(position) > 1500 else GREEN
                     print(f"    {ticker:<6} bid={best_bid:.2f} ask={best_ask:.2f}"
-                          f" spd={spread:.2f} pos={pos_c}{position:>+6f}{RESET}  {act}")
+                          f" spd={spread:.2f} pos={pos_c}{position:>+6.0f}{RESET}  {act}")
 
                     quotes[ticker] = {"our_bid": our_bid, "our_ask": our_ask, "qty": order_qty}
 
             # 4. Log
             log_tick(log_fh, tick, tick_in_minute, securities_data, quotes,
-                     aggregate_exposure, limits, actions)
+                     aggregate_exposure, api_gross, api_net, max_exposure, max_net, nlv, actions)
 
-            # # 5. Pace the loop (~0.25s target cycle)
-            # elapsed = time.time() - loop_start
-            # time.sleep(max(0.05, 0.25 - elapsed))
-            time.sleep(0.05)
+            time.sleep(0.5)
 
     except KeyboardInterrupt:
         print(f"\n  {BOLD}Shutting down.{RESET}")
