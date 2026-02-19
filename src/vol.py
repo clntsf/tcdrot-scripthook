@@ -40,7 +40,8 @@ PRIMARY_QTY         = 1750   # contracts for the best-edge position (with second
 SECONDARY_QTY       = 750    # contracts for the best opposite-direction position
 MIN_EDGE            = 0.10   # minimum edge to open a new position
 DEFAULT_DELTA_LIMIT = 1000   # fallback delta limit until news arrives
-HEDGE_BAND          = 25     # only re-hedge in hold phase when |delta| exceeds this
+RTM_HEDGE_FRAC      = 0.60   # max fraction of RTM_SHARE_LIMIT used for initial hedge
+HEDGE_BAND_FRAC     = 0.75   # re-hedge in hold phase when |delta| > this * delta_limit
 SUBHEAT_TICKS       = 75     # ticks per sub-heat (options expiry cycle)
 UNWIND_AT_TICK      = 59     # close at this offset within sub-heat (abs ticks 60,135,210,285)
 
@@ -268,27 +269,39 @@ def _build_position(tapi: TradingAPI, prices: dict) -> None:
         return (s[1] != p_action
                 and _position_signed_delta(s[0], s[1], s[3]) * p_sign < 0)
 
-    # Find secondary: prefer opposite-action + opposite-delta (reduces net delta);
-    # fall back to any opposite-action option — there's always some edge at week start.
+    # Find secondary: must be opposite-action AND opposite delta direction.
+    # Tier-3 (any opposite action) is intentionally omitted — deep-ITM options
+    # with tiny BUY edges have delta ≈ ±1 and would amplify exposure catastrophically.
     all_sigs_any = _identify_mispricings(prices, min_edge=0.0)
     sec = next((s for s in signals[1:] if is_opposite(s)), None)
     if sec is None:
         sec = next((s for s in all_sigs_any if s[0] != p_ticker and is_opposite(s)), None)
-    if sec is None:
-        # No delta-opposite found; take best opposite-action regardless of delta sign
-        sec = next((s for s in all_sigs_any if s[0] != p_ticker and s[1] != p_action), None)
 
-    s_ticker = sec[0] if sec else None
-    s_action = sec[1] if sec else None
-    s_edge   = sec[2] if sec else 0.0
-    s_total  = SECONDARY_QTY if sec else 0
+    rtm_budget = RTM_SHARE_LIMIT * RTM_HEDGE_FRAC   # shares reserved for initial hedge
 
     if sec:
-        p_total = PRIMARY_QTY
+        s_ticker = sec[0]
+        s_action = sec[1]
+        s_edge   = sec[2]
+        s_abs_delta = sec[3]
+        # Net delta of the pair: both legs partially cancel
+        s_sign  = _position_signed_delta(s_ticker, s_action, s_abs_delta)
+        net_delta_per_unit = abs(p_sign * PRIMARY_QTY + s_sign * SECONDARY_QTY) * OPTION_MULTIPLIER
+        # If combined hedge would exceed budget, scale both legs proportionally
+        if net_delta_per_unit > rtm_budget:
+            scale  = rtm_budget / net_delta_per_unit
+            p_total = max(1, int(PRIMARY_QTY   * scale))
+            s_total = max(1, int(SECONDARY_QTY * scale))
+        else:
+            p_total = PRIMARY_QTY
+            s_total = SECONDARY_QTY
     else:
-        # No secondary: cap by options net limit AND by how much RTM can hedge
+        s_ticker = s_action = None
+        s_edge   = 0.0
+        s_total  = 0
+        # No secondary: cap by options net limit AND by RTM hedge budget
         delta_per_contract = p_abs_delta * OPTION_MULTIPLIER
-        max_by_rtm = int(RTM_SHARE_LIMIT / max(delta_per_contract, 1))
+        max_by_rtm = int(rtm_budget / max(delta_per_contract, 1))
         p_total = min(OPTIONS_NET_LIMIT, max_by_rtm)
 
     print(f"  [build] RV={_state['realized_vol']:.1%}")
@@ -397,18 +410,23 @@ def _execute_hedge(tapi: TradingAPI, force: bool = False) -> None:
     shares = -round(delta)   # buy if delta < 0, sell if delta > 0
     if shares == 0:
         return
-    if not force and abs(shares) < HEDGE_BAND:
+    if not force and abs(shares) < HEDGE_BAND_FRAC * _state["delta_limit"]:
         return
 
-    # Cap to available RTM net headroom
+    # Cap to available RTM net headroom.
+    # Use locally-tracked rtm_position as fallback so a failed API call never
+    # leaves shares uncapped (which previously caused 160k+ RTM orders).
+    net_limit = RTM_SHARE_LIMIT
     try:
         for lim in tapi.get_limits():
             if lim.get("ticker") == "RTM":
-                room = int(lim.get("net_limit", 50000) * 0.95 - abs(lim.get("net", 0)))
-                shares = max(-room, min(room, shares))
+                net_limit = int(lim.get("net_limit", RTM_SHARE_LIMIT))
                 break
     except Exception:
         pass
+    current_net = abs(_state["rtm_position"])
+    room = max(0, int(net_limit * 0.95) - current_net)
+    shares = max(-room, min(room, shares))
 
     if shares == 0:
         return
@@ -445,7 +463,7 @@ def run_trading_loop() -> None:
             for st in self.streams:
                 st.flush()
 
-    _log = open("logs.txt", "a")
+    _log = open("logs.txt", "a", encoding="utf-8")
     sys.stdout = _Tee(sys.__stdout__, _log)
 
     tapi = TradingAPI(API_KEY, port=API_PORT)

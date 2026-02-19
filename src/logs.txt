@@ -1,0 +1,1662 @@
+============================================================
+VOL ARBIT — live loop started
+============================================================
+[news] realized_vol → 22.0%
+[news] realized_vol → 18.0%
+[news] realized_vol → 30.0%
+[news] delta_limit=12000  penalty=2.0%
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+
+[tick 0 +74]  RTM=$0.00  RV=30.0%  Δ=0/12000  pos=0
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 1 +0]  RTM=$50.00  RV=30.0%  Δ=0/11000  pos=0
+  [build] RV=30.0%
+    PRIMARY   BUY  966x RTM1C50  edge=+0.937
+  BUY  100x RTM1C50
+  BUY  100x RTM1C50
+  BUY  100x RTM1C50
+  BUY  100x RTM1C50
+  BUY  100x RTM1C50
+  BUY  100x RTM1C50
+  BUY  100x RTM1C50
+  BUY  100x RTM1C50
+  BUY  100x RTM1C50
+  BUY   66x RTM1C50
+  HEDGE SELL 49063 RTM  (Δ was +49063)
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 4 +3]  RTM=$49.68  RV=30.0%  Δ=-6485/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 5 +4]  RTM=$49.60  RV=30.0%  Δ=-8151/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 6 +5]  RTM=$49.56  RV=30.0%  Δ=-8998/11000  pos=1
+  HEDGE BUY  8998 RTM  (Δ was -8998)
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 7 +6]  RTM=$49.60  RV=30.0%  Δ=1610/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 8 +7]  RTM=$49.52  RV=30.0%  Δ=-1147/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 9 +8]  RTM=$49.45  RV=30.0%  Δ=-1242/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 10 +9]  RTM=$49.38  RV=30.0%  Δ=-2716/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 11 +10]  RTM=$49.52  RV=30.0%  Δ=-999/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 12 +11]  RTM=$49.68  RV=30.0%  Δ=2113/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 13 +12]  RTM=$49.67  RV=30.0%  Δ=2356/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 14 +13]  RTM=$49.62  RV=30.0%  Δ=1377/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 15 +14]  RTM=$49.71  RV=30.0%  Δ=3342/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 16 +15]  RTM=$49.72  RV=30.0%  Δ=3419/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 17 +16]  RTM=$49.66  RV=30.0%  Δ=2200/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 18 +17]  RTM=$49.64  RV=30.0%  Δ=1351/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 19 +18]  RTM=$49.67  RV=30.0%  Δ=2257/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 20 +19]  RTM=$49.70  RV=30.0%  Δ=2346/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 21 +20]  RTM=$49.49  RV=30.0%  Δ=-1897/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 22 +21]  RTM=$49.39  RV=30.0%  Δ=-4395/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 23 +22]  RTM=$49.35  RV=30.0%  Δ=-5137/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 24 +23]  RTM=$49.11  RV=30.0%  Δ=-9997/11000  pos=1
+  HEDGE BUY  9997 RTM  (Δ was -9997)
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 25 +24]  RTM=$49.21  RV=30.0%  Δ=1112/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 26 +25]  RTM=$49.24  RV=30.0%  Δ=2296/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 27 +26]  RTM=$49.29  RV=30.0%  Δ=3407/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 28 +27]  RTM=$49.23  RV=30.0%  Δ=2437/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 29 +28]  RTM=$49.14  RV=30.0%  Δ=325/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 30 +29]  RTM=$49.18  RV=30.0%  Δ=1057/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 31 +30]  RTM=$49.18  RV=30.0%  Δ=475/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 32 +31]  RTM=$49.29  RV=30.0%  Δ=3163/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 33 +32]  RTM=$49.29  RV=30.0%  Δ=2911/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 34 +33]  RTM=$49.16  RV=30.0%  Δ=-60/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 35 +34]  RTM=$49.16  RV=30.0%  Δ=-59/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 36 +35]  RTM=$49.31  RV=30.0%  Δ=3164/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 37 +36]  RTM=$49.31  RV=30.0%  Δ=3165/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 38 +37]  RTM=$49.37  RV=30.0%  Δ=3707/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 39 +38]  RTM=$49.26  RV=30.0%  Δ=1126/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 40 +39]  RTM=$49.24  RV=30.0%  Δ=1181/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 41 +40]  RTM=$49.24  RV=30.0%  Δ=564/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 42 +41]  RTM=$49.27  RV=30.0%  Δ=1254/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 43 +42]  RTM=$49.22  RV=30.0%  Δ=-8/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 44 +43]  RTM=$49.32  RV=30.0%  Δ=2489/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 45 +44]  RTM=$49.32  RV=30.0%  Δ=2201/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 46 +45]  RTM=$49.36  RV=30.0%  Δ=3032/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 47 +46]  RTM=$49.38  RV=30.0%  Δ=3031/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 48 +47]  RTM=$49.52  RV=30.0%  Δ=6468/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 49 +48]  RTM=$49.45  RV=30.0%  Δ=4877/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 50 +49]  RTM=$49.50  RV=30.0%  Δ=5911/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 51 +50]  RTM=$49.56  RV=30.0%  Δ=7358/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 52 +51]  RTM=$49.65  RV=30.0%  Δ=9730/11000  pos=1
+  HEDGE SELL 9730 RTM  (Δ was +9730)
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 53 +52]  RTM=$49.64  RV=30.0%  Δ=-357/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 54 +53]  RTM=$49.51  RV=30.0%  Δ=-3654/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 55 +54]  RTM=$49.43  RV=30.0%  Δ=-6535/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 56 +55]  RTM=$49.34  RV=30.0%  Δ=-8512/11000  pos=1
+  HEDGE BUY  8512 RTM  (Δ was -8512)
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 57 +56]  RTM=$49.33  RV=30.0%  Δ=193/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 58 +57]  RTM=$49.27  RV=30.0%  Δ=-1286/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 59 +58]  RTM=$49.05  RV=30.0%  Δ=-6231/11000  pos=1
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 60 +59]  RTM=$49.14  RV=30.0%  Δ=-5272/11000  pos=1
+  [unwind] sub-heat tick 59
+  [close all] 1 position(s)
+  SELL 100x RTM1C50
+  SELL 100x RTM1C50
+  SELL 100x RTM1C50
+  SELL 100x RTM1C50
+  SELL 100x RTM1C50
+  SELL 100x RTM1C50
+  SELL 100x RTM1C50
+  SELL 100x RTM1C50
+  SELL 100x RTM1C50
+  SELL  66x RTM1C50
+  HEDGE BUY  31286 RTM  (Δ was -31286)
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 63 +62]  RTM=$49.33  RV=30.0%  Δ=0/11000  pos=0
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 64 +63]  RTM=$49.29  RV=30.0%  Δ=0/11000  pos=0
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 65 +64]  RTM=$49.33  RV=30.0%  Δ=0/11000  pos=0
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 66 +65]  RTM=$49.22  RV=30.0%  Δ=0/11000  pos=0
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 67 +66]  RTM=$49.03  RV=30.0%  Δ=0/11000  pos=0
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 68 +67]  RTM=$48.94  RV=30.0%  Δ=0/11000  pos=0
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 69 +68]  RTM=$48.93  RV=30.0%  Δ=0/11000  pos=0
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 70 +69]  RTM=$48.87  RV=30.0%  Δ=0/11000  pos=0
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 71 +70]  RTM=$48.94  RV=30.0%  Δ=0/11000  pos=0
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 72 +71]  RTM=$49.04  RV=30.0%  Δ=0/11000  pos=0
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 73 +72]  RTM=$49.09  RV=30.0%  Δ=0/11000  pos=0
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 74 +73]  RTM=$49.15  RV=30.0%  Δ=0/11000  pos=0
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 75 +74]  RTM=$49.18  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 76 +0]  RTM=$49.33  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 77 +1]  RTM=$49.57  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 78 +2]  RTM=$49.28  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 79 +3]  RTM=$49.22  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 80 +4]  RTM=$49.35  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 81 +5]  RTM=$49.32  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 82 +6]  RTM=$49.18  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 83 +7]  RTM=$49.17  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 84 +8]  RTM=$49.08  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 85 +9]  RTM=$49.10  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 86 +10]  RTM=$49.25  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 87 +11]  RTM=$49.11  RV=12.0%  Δ=0/11000  pos=0
+  [build] RV=12.0%
+    PRIMARY   SELL 1750x RTM1C49  edge=-0.107
+    SECONDARY BUY  750x RTM1P54  edge=+0.001
+  SELL 100x RTM1C49
+  BUY  100x RTM1P54
+  SELL 100x RTM1C49
+  BUY  100x RTM1P54
+  SELL 100x RTM1C49
+  BUY  100x RTM1P54
+  SELL 100x RTM1C49
+  BUY  100x RTM1P54
+  SELL 100x RTM1C49
+  BUY  100x RTM1P54
+  SELL 100x RTM1C49
+  BUY  100x RTM1P54
+  SELL 100x RTM1C49
+  BUY  100x RTM1P54
+  SELL 100x RTM1C49
+  BUY   50x RTM1P54
+  SELL 100x RTM1C49
+  SELL 100x RTM1C49
+  SELL 100x RTM1C49
+  SELL 100x RTM1C49
+  SELL 100x RTM1C49
+  SELL 100x RTM1C49
+  SELL 100x RTM1C49
+  SELL 100x RTM1C49
+  SELL 100x RTM1C49
+  SELL  50x RTM1C49
+  HEDGE BUY  167979 RTM  (Δ was -167979)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 92 +16]  RTM=$49.18  RV=12.0%  Δ=-120601/11000  pos=2
+  HEDGE BUY  120601 RTM  (Δ was -120601)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 93 +17]  RTM=$49.17  RV=12.0%  Δ=-119431/11000  pos=2
+  HEDGE BUY  119431 RTM  (Δ was -119431)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 94 +18]  RTM=$49.24  RV=12.0%  Δ=-122793/11000  pos=2
+  HEDGE BUY  122793 RTM  (Δ was -122793)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 95 +19]  RTM=$49.27  RV=12.0%  Δ=-123158/11000  pos=2
+  HEDGE BUY  123158 RTM  (Δ was -123158)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 96 +20]  RTM=$49.17  RV=12.0%  Δ=-119865/11000  pos=2
+  HEDGE BUY  119865 RTM  (Δ was -119865)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 97 +21]  RTM=$49.16  RV=12.0%  Δ=-120438/11000  pos=2
+  HEDGE BUY  120438 RTM  (Δ was -120438)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 98 +22]  RTM=$49.32  RV=12.0%  Δ=-127114/11000  pos=2
+  HEDGE BUY  127114 RTM  (Δ was -127114)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 99 +23]  RTM=$49.40  RV=12.0%  Δ=-131084/11000  pos=2
+  HEDGE BUY  131084 RTM  (Δ was -131084)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 100 +24]  RTM=$49.33  RV=12.0%  Δ=-126379/11000  pos=2
+  HEDGE BUY  126379 RTM  (Δ was -126379)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 101 +25]  RTM=$49.50  RV=12.0%  Δ=-133270/11000  pos=2
+  HEDGE BUY  133270 RTM  (Δ was -133270)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 102 +26]  RTM=$49.42  RV=12.0%  Δ=-131451/11000  pos=2
+  HEDGE BUY  131451 RTM  (Δ was -131451)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 103 +27]  RTM=$49.36  RV=12.0%  Δ=-129055/11000  pos=2
+  HEDGE BUY  129055 RTM  (Δ was -129055)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 104 +28]  RTM=$49.47  RV=12.0%  Δ=-133823/11000  pos=2
+  HEDGE BUY  133823 RTM  (Δ was -133823)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 105 +29]  RTM=$49.53  RV=12.0%  Δ=-136211/11000  pos=2
+  HEDGE BUY  136211 RTM  (Δ was -136211)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 106 +30]  RTM=$49.69  RV=12.0%  Δ=-142359/11000  pos=2
+  HEDGE BUY  142359 RTM  (Δ was -142359)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 107 +31]  RTM=$49.77  RV=12.0%  Δ=-146073/11000  pos=2
+  HEDGE BUY  146073 RTM  (Δ was -146073)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 108 +32]  RTM=$49.71  RV=12.0%  Δ=-143285/11000  pos=2
+  HEDGE BUY  143285 RTM  (Δ was -143285)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 109 +33]  RTM=$49.69  RV=12.0%  Δ=-143266/11000  pos=2
+  HEDGE BUY  143266 RTM  (Δ was -143266)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 110 +34]  RTM=$49.82  RV=12.0%  Δ=-147775/11000  pos=2
+  HEDGE BUY  147775 RTM  (Δ was -147775)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 111 +35]  RTM=$49.67  RV=12.0%  Δ=-142311/11000  pos=2
+  HEDGE BUY  142311 RTM  (Δ was -142311)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 112 +36]  RTM=$49.86  RV=12.0%  Δ=-149741/11000  pos=2
+  HEDGE BUY  149741 RTM  (Δ was -149741)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 113 +37]  RTM=$50.05  RV=12.0%  Δ=-155346/11000  pos=2
+  HEDGE BUY  155346 RTM  (Δ was -155346)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 114 +38]  RTM=$49.97  RV=12.0%  Δ=-153237/11000  pos=2
+  HEDGE BUY  153237 RTM  (Δ was -153237)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 115 +39]  RTM=$50.12  RV=12.0%  Δ=-160785/11000  pos=2
+  HEDGE BUY  160785 RTM  (Δ was -160785)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 116 +40]  RTM=$50.22  RV=12.0%  Δ=-164928/11000  pos=2
+  HEDGE BUY  164928 RTM  (Δ was -164928)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 117 +41]  RTM=$50.31  RV=12.0%  Δ=-166803/11000  pos=2
+  HEDGE BUY  166803 RTM  (Δ was -166803)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 118 +42]  RTM=$50.31  RV=12.0%  Δ=-168063/11000  pos=2
+  HEDGE BUY  168063 RTM  (Δ was -168063)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 119 +43]  RTM=$50.36  RV=12.0%  Δ=-168662/11000  pos=2
+  HEDGE BUY  168662 RTM  (Δ was -168662)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 120 +44]  RTM=$50.35  RV=12.0%  Δ=-167261/11000  pos=2
+  HEDGE BUY  167261 RTM  (Δ was -167261)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 121 +45]  RTM=$50.27  RV=12.0%  Δ=-167570/11000  pos=2
+  HEDGE BUY  167570 RTM  (Δ was -167570)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 122 +46]  RTM=$50.18  RV=12.0%  Δ=-163427/11000  pos=2
+  HEDGE BUY  163427 RTM  (Δ was -163427)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 123 +47]  RTM=$50.12  RV=12.0%  Δ=-163461/11000  pos=2
+  HEDGE BUY  163461 RTM  (Δ was -163461)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 124 +48]  RTM=$50.36  RV=12.0%  Δ=-169528/11000  pos=2
+  HEDGE BUY  169528 RTM  (Δ was -169528)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 125 +49]  RTM=$50.32  RV=12.0%  Δ=-170364/11000  pos=2
+  HEDGE BUY  170364 RTM  (Δ was -170364)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 126 +50]  RTM=$50.28  RV=12.0%  Δ=-168754/11000  pos=2
+  HEDGE BUY  168754 RTM  (Δ was -168754)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 128 +52]  RTM=$50.09  RV=12.0%  Δ=-160836/11000  pos=2
+  HEDGE BUY  160836 RTM  (Δ was -160836)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 128 +52]  RTM=$50.09  RV=12.0%  Δ=-160836/11000  pos=2
+  HEDGE BUY  160836 RTM  (Δ was -160836)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 130 +54]  RTM=$50.07  RV=12.0%  Δ=-160845/11000  pos=2
+  HEDGE BUY  160845 RTM  (Δ was -160845)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 131 +55]  RTM=$50.08  RV=12.0%  Δ=-161898/11000  pos=2
+  HEDGE BUY  161898 RTM  (Δ was -161898)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 132 +56]  RTM=$50.09  RV=12.0%  Δ=-164007/11000  pos=2
+  HEDGE BUY  164007 RTM  (Δ was -164007)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 133 +57]  RTM=$50.13  RV=12.0%  Δ=-164610/11000  pos=2
+  HEDGE BUY  164610 RTM  (Δ was -164610)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 134 +58]  RTM=$50.07  RV=12.0%  Δ=-161731/11000  pos=2
+  HEDGE BUY  161731 RTM  (Δ was -161731)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 135 +59]  RTM=$50.14  RV=12.0%  Δ=-165781/11000  pos=2
+  [unwind] sub-heat tick 59
+  [close all] 2 position(s)
+  BUY  100x RTM1C49
+  SELL 100x RTM1P54
+  BUY  100x RTM1C49
+  SELL 100x RTM1P54
+  BUY  100x RTM1C49
+  SELL 100x RTM1P54
+  BUY  100x RTM1C49
+  SELL 100x RTM1P54
+  BUY  100x RTM1C49
+  SELL 100x RTM1P54
+  BUY  100x RTM1C49
+  SELL 100x RTM1P54
+  BUY  100x RTM1C49
+  SELL 100x RTM1P54
+  BUY  100x RTM1C49
+  SELL  50x RTM1P54
+  BUY  100x RTM1C49
+  BUY  100x RTM1C49
+  BUY  100x RTM1C49
+  BUY  100x RTM1C49
+  BUY  100x RTM1C49
+  BUY  100x RTM1C49
+  BUY  100x RTM1C49
+  BUY  100x RTM1C49
+  BUY  100x RTM1C49
+  BUY   50x RTM1C49
+  HEDGE SELL 50000 RTM  (Δ was +50000)
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 139 +63]  RTM=$50.15  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 140 +64]  RTM=$50.15  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 141 +65]  RTM=$49.90  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 142 +66]  RTM=$49.83  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 143 +67]  RTM=$49.79  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 144 +68]  RTM=$49.92  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 145 +69]  RTM=$49.95  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 146 +70]  RTM=$49.88  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 147 +71]  RTM=$49.89  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 148 +72]  RTM=$49.93  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 149 +73]  RTM=$49.86  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 150 +74]  RTM=$49.85  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 151 +0]  RTM=$49.78  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 152 +1]  RTM=$49.87  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 153 +2]  RTM=$50.16  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 154 +3]  RTM=$50.07  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 155 +4]  RTM=$49.88  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 156 +5]  RTM=$49.91  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 157 +6]  RTM=$49.87  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 158 +7]  RTM=$49.74  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 159 +8]  RTM=$49.78  RV=12.0%  Δ=0/11000  pos=0
+  [build] no mispricings above threshold
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 160 +9]  RTM=$49.91  RV=12.0%  Δ=0/11000  pos=0
+  [build] RV=12.0%
+    PRIMARY   SELL 1750x RTM1P51  edge=-0.101
+    SECONDARY BUY  750x RTM1C45  edge=+0.000
+  SELL 100x RTM1P51
+  BUY  100x RTM1C45
+  SELL 100x RTM1P51
+  BUY  100x RTM1C45
+  SELL 100x RTM1P51
+  BUY  100x RTM1C45
+  SELL 100x RTM1P51
+  BUY  100x RTM1C45
+  SELL 100x RTM1P51
+  BUY  100x RTM1C45
+  SELL 100x RTM1P51
+  BUY  100x RTM1C45
+  SELL 100x RTM1P51
+  BUY  100x RTM1C45
+  SELL 100x RTM1P51
+  BUY   50x RTM1C45
+  SELL 100x RTM1P51
+  SELL 100x RTM1P51
+  SELL 100x RTM1P51
+  SELL 100x RTM1P51
+  SELL 100x RTM1P51
+  SELL 100x RTM1P51
+  SELL 100x RTM1P51
+  SELL 100x RTM1P51
+  SELL 100x RTM1P51
+  SELL  50x RTM1P51
+  HEDGE SELL 198498 RTM  (Δ was +198498)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 165 +14]  RTM=$49.51  RV=12.0%  Δ=163087/11000  pos=2
+  HEDGE SELL 163087 RTM  (Δ was +163087)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 166 +15]  RTM=$49.77  RV=12.0%  Δ=153439/11000  pos=2
+  HEDGE SELL 153439 RTM  (Δ was +153439)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 167 +16]  RTM=$49.79  RV=12.0%  Δ=152544/11000  pos=2
+  HEDGE SELL 152544 RTM  (Δ was +152544)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 168 +17]  RTM=$49.72  RV=12.0%  Δ=157456/11000  pos=2
+  HEDGE SELL 157456 RTM  (Δ was +157456)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 169 +18]  RTM=$49.92  RV=12.0%  Δ=148870/11000  pos=2
+  HEDGE SELL 148870 RTM  (Δ was +148870)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 170 +19]  RTM=$50.25  RV=12.0%  Δ=139398/11000  pos=2
+  HEDGE SELL 139398 RTM  (Δ was +139398)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 171 +20]  RTM=$50.37  RV=12.0%  Δ=134130/11000  pos=2
+  HEDGE SELL 134130 RTM  (Δ was +134130)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 172 +21]  RTM=$50.24  RV=12.0%  Δ=137285/11000  pos=2
+  HEDGE SELL 137285 RTM  (Δ was +137285)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 173 +22]  RTM=$50.18  RV=12.0%  Δ=140008/11000  pos=2
+  HEDGE SELL 140008 RTM  (Δ was +140008)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 174 +23]  RTM=$50.22  RV=12.0%  Δ=139613/11000  pos=2
+  HEDGE SELL 139613 RTM  (Δ was +139613)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 175 +24]  RTM=$50.22  RV=12.0%  Δ=140900/11000  pos=2
+  HEDGE SELL 140900 RTM  (Δ was +140900)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 176 +25]  RTM=$50.21  RV=12.0%  Δ=140230/11000  pos=2
+  HEDGE SELL 140230 RTM  (Δ was +140230)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 177 +26]  RTM=$50.27  RV=12.0%  Δ=139824/11000  pos=2
+  HEDGE SELL 139824 RTM  (Δ was +139824)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 178 +27]  RTM=$50.33  RV=12.0%  Δ=136823/11000  pos=2
+  HEDGE SELL 136823 RTM  (Δ was +136823)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 179 +28]  RTM=$50.33  RV=12.0%  Δ=138453/11000  pos=2
+  HEDGE SELL 138453 RTM  (Δ was +138453)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 180 +29]  RTM=$50.46  RV=12.0%  Δ=133983/11000  pos=2
+  HEDGE SELL 133983 RTM  (Δ was +133983)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 181 +30]  RTM=$50.41  RV=12.0%  Δ=136477/11000  pos=2
+  HEDGE SELL 136477 RTM  (Δ was +136477)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 182 +31]  RTM=$50.42  RV=12.0%  Δ=135030/11000  pos=2
+  HEDGE SELL 135030 RTM  (Δ was +135030)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 184 +33]  RTM=$50.47  RV=12.0%  Δ=134874/11000  pos=2
+  HEDGE SELL 134874 RTM  (Δ was +134874)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 185 +34]  RTM=$50.49  RV=12.0%  Δ=132810/11000  pos=2
+  HEDGE SELL 132810 RTM  (Δ was +132810)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 186 +35]  RTM=$50.44  RV=12.0%  Δ=135285/11000  pos=2
+  HEDGE SELL 135285 RTM  (Δ was +135285)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 187 +36]  RTM=$50.40  RV=12.0%  Δ=137606/11000  pos=2
+  HEDGE SELL 137606 RTM  (Δ was +137606)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 188 +37]  RTM=$50.46  RV=12.0%  Δ=135546/11000  pos=2
+  HEDGE SELL 135546 RTM  (Δ was +135546)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 189 +38]  RTM=$50.50  RV=12.0%  Δ=133243/11000  pos=2
+  HEDGE SELL 133243 RTM  (Δ was +133243)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 190 +39]  RTM=$50.46  RV=12.0%  Δ=135983/11000  pos=2
+  HEDGE SELL 135983 RTM  (Δ was +135983)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 191 +40]  RTM=$50.38  RV=12.0%  Δ=139534/11000  pos=2
+  HEDGE SELL 139534 RTM  (Δ was +139534)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 192 +41]  RTM=$50.12  RV=12.0%  Δ=150228/11000  pos=2
+  HEDGE SELL 150228 RTM  (Δ was +150228)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 193 +42]  RTM=$50.27  RV=12.0%  Δ=145025/11000  pos=2
+  HEDGE SELL 145025 RTM  (Δ was +145025)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 194 +43]  RTM=$50.36  RV=12.0%  Δ=141651/11000  pos=2
+  HEDGE SELL 141651 RTM  (Δ was +141651)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 195 +44]  RTM=$50.13  RV=12.0%  Δ=151510/11000  pos=2
+  HEDGE SELL 151510 RTM  (Δ was +151510)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 196 +45]  RTM=$49.98  RV=12.0%  Δ=157573/11000  pos=2
+  HEDGE SELL 157573 RTM  (Δ was +157573)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 197 +46]  RTM=$50.04  RV=12.0%  Δ=155655/11000  pos=2
+  HEDGE SELL 155655 RTM  (Δ was +155655)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 198 +47]  RTM=$50.00  RV=12.0%  Δ=158151/11000  pos=2
+  HEDGE SELL 158151 RTM  (Δ was +158151)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 199 +48]  RTM=$50.08  RV=12.0%  Δ=155801/11000  pos=2
+  HEDGE SELL 155801 RTM  (Δ was +155801)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 200 +49]  RTM=$50.23  RV=12.0%  Δ=149385/11000  pos=2
+  HEDGE SELL 149385 RTM  (Δ was +149385)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 201 +50]  RTM=$50.19  RV=12.0%  Δ=151846/11000  pos=2
+  HEDGE SELL 151846 RTM  (Δ was +151846)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 202 +51]  RTM=$50.12  RV=12.0%  Δ=154145/11000  pos=2
+  HEDGE SELL 154145 RTM  (Δ was +154145)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 203 +52]  RTM=$50.04  RV=12.0%  Δ=158422/11000  pos=2
+  HEDGE SELL 158422 RTM  (Δ was +158422)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 204 +53]  RTM=$50.08  RV=12.0%  Δ=155804/11000  pos=2
+  HEDGE SELL 155804 RTM  (Δ was +155804)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 205 +54]  RTM=$50.01  RV=12.0%  Δ=157996/11000  pos=2
+  HEDGE SELL 157996 RTM  (Δ was +157996)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 206 +55]  RTM=$50.10  RV=12.0%  Δ=158341/11000  pos=2
+  HEDGE SELL 158341 RTM  (Δ was +158341)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 207 +56]  RTM=$50.42  RV=12.0%  Δ=140042/11000  pos=2
+  HEDGE SELL 140042 RTM  (Δ was +140042)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 208 +57]  RTM=$50.42  RV=12.0%  Δ=140048/11000  pos=2
+  HEDGE SELL 140048 RTM  (Δ was +140048)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 209 +58]  RTM=$50.39  RV=12.0%  Δ=144630/11000  pos=2
+  HEDGE SELL 144630 RTM  (Δ was +144630)
+  [hedge error] SELL 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=SELL
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 210 +59]  RTM=$50.53  RV=12.0%  Δ=135731/11000  pos=2
+  [unwind] sub-heat tick 59
+  [close all] 2 position(s)
+  BUY  100x RTM1P51
+  SELL 100x RTM1C45
+  BUY  100x RTM1P51
+  SELL 100x RTM1C45
+  BUY  100x RTM1P51
+  SELL 100x RTM1C45
+  BUY  100x RTM1P51
+  SELL 100x RTM1C45
+  BUY  100x RTM1P51
+  SELL 100x RTM1C45
+  BUY  100x RTM1P51
+  SELL 100x RTM1C45
+  BUY  100x RTM1P51
+  SELL 100x RTM1C45
+  BUY  100x RTM1P51
+  SELL  50x RTM1C45
+  BUY  100x RTM1P51
+  BUY  100x RTM1P51
+  BUY  100x RTM1P51
+  BUY  100x RTM1P51
+  BUY  100x RTM1P51
+  BUY  100x RTM1P51
+  BUY  100x RTM1P51
+  BUY  100x RTM1P51
+  BUY  100x RTM1P51
+  BUY   50x RTM1P51
+  HEDGE BUY  50000 RTM  (Δ was -50000)
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 215 +64]  RTM=$50.76  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 216 +65]  RTM=$50.86  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 217 +66]  RTM=$50.70  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 218 +67]  RTM=$50.54  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 219 +68]  RTM=$50.46  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 220 +69]  RTM=$50.51  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 221 +70]  RTM=$50.70  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 222 +71]  RTM=$50.81  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 223 +72]  RTM=$50.95  RV=12.0%  Δ=0/11000  pos=0
+[news] realized_vol → 16.0%
+[news] realized_vol → 12.0%
+[news] delta_limit=11000  penalty=5.0%
+
+[tick 224 +73]  RTM=$50.88  RV=12.0%  Δ=0/11000  pos=0
+
+[tick 225 +74]  RTM=$50.92  RV=12.0%  Δ=0/11000  pos=0
+
+[tick 226 +0]  RTM=$50.78  RV=12.0%  Δ=0/11000  pos=0
+  [build] RV=12.0%
+    PRIMARY   BUY  1750x RTM1P51  edge=+0.309
+    SECONDARY SELL 750x RTM1P45  edge=-0.020
+  BUY  100x RTM1P51
+  SELL 100x RTM1P45
+  BUY  100x RTM1P51
+  SELL 100x RTM1P45
+  BUY  100x RTM1P51
+  SELL 100x RTM1P45
+  BUY  100x RTM1P51
+  SELL 100x RTM1P45
+  BUY  100x RTM1P51
+  SELL 100x RTM1P45
+  BUY  100x RTM1P51
+  SELL 100x RTM1P45
+  BUY  100x RTM1P51
+  SELL 100x RTM1P45
+  BUY  100x RTM1P51
+  SELL  50x RTM1P45
+  BUY  100x RTM1P51
+  BUY  100x RTM1P51
+  BUY  100x RTM1P51
+  BUY  100x RTM1P51
+  BUY  100x RTM1P51
+  BUY  100x RTM1P51
+  BUY  100x RTM1P51
+  BUY  100x RTM1P51
+  BUY  100x RTM1P51
+  BUY   50x RTM1P51
+  HEDGE BUY  101053 RTM  (Δ was -101053)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 230 +4]  RTM=$51.01  RV=12.0%  Δ=-34801/11000  pos=2
+  HEDGE BUY  34801 RTM  (Δ was -34801)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 231 +5]  RTM=$50.84  RV=12.0%  Δ=-45610/11000  pos=2
+  HEDGE BUY  45610 RTM  (Δ was -45610)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 232 +6]  RTM=$50.99  RV=12.0%  Δ=-35803/11000  pos=2
+  HEDGE BUY  35803 RTM  (Δ was -35803)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 234 +8]  RTM=$51.02  RV=12.0%  Δ=-34225/11000  pos=2
+  HEDGE BUY  34225 RTM  (Δ was -34225)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 235 +9]  RTM=$51.06  RV=12.0%  Δ=-31993/11000  pos=2
+  HEDGE BUY  31993 RTM  (Δ was -31993)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 236 +10]  RTM=$51.01  RV=12.0%  Δ=-34728/11000  pos=2
+  HEDGE BUY  34728 RTM  (Δ was -34728)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 237 +11]  RTM=$50.51  RV=12.0%  Δ=-59456/11000  pos=2
+  HEDGE BUY  59456 RTM  (Δ was -59456)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 238 +12]  RTM=$50.62  RV=12.0%  Δ=-53171/11000  pos=2
+  HEDGE BUY  53171 RTM  (Δ was -53171)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 239 +13]  RTM=$50.72  RV=12.0%  Δ=-49044/11000  pos=2
+  HEDGE BUY  49044 RTM  (Δ was -49044)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 240 +14]  RTM=$51.05  RV=12.0%  Δ=-32980/11000  pos=2
+  HEDGE BUY  32980 RTM  (Δ was -32980)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 241 +15]  RTM=$51.41  RV=12.0%  Δ=-16252/11000  pos=2
+  HEDGE BUY  16252 RTM  (Δ was -16252)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 242 +16]  RTM=$51.50  RV=12.0%  Δ=-13456/11000  pos=2
+  HEDGE BUY  13456 RTM  (Δ was -13456)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 243 +17]  RTM=$51.60  RV=12.0%  Δ=-8765/11000  pos=2
+  HEDGE BUY  8765 RTM  (Δ was -8765)
+  [hedge error] BUY 8765 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=8765&action=BUY
+
+[tick 244 +18]  RTM=$51.73  RV=12.0%  Δ=-6380/11000  pos=2
+
+[tick 245 +19]  RTM=$51.71  RV=12.0%  Δ=-6430/11000  pos=2
+
+[tick 246 +20]  RTM=$51.44  RV=12.0%  Δ=-14957/11000  pos=2
+  HEDGE BUY  14957 RTM  (Δ was -14957)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 247 +21]  RTM=$51.40  RV=12.0%  Δ=-17160/11000  pos=2
+  HEDGE BUY  17160 RTM  (Δ was -17160)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 248 +22]  RTM=$51.21  RV=12.0%  Δ=-26252/11000  pos=2
+  HEDGE BUY  26252 RTM  (Δ was -26252)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 249 +23]  RTM=$51.52  RV=12.0%  Δ=-11023/11000  pos=2
+  HEDGE BUY  11023 RTM  (Δ was -11023)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 250 +24]  RTM=$51.39  RV=12.0%  Δ=-18527/11000  pos=2
+  HEDGE BUY  18527 RTM  (Δ was -18527)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 251 +25]  RTM=$51.75  RV=12.0%  Δ=-3657/11000  pos=2
+
+[tick 252 +26]  RTM=$52.12  RV=12.0%  Δ=11076/11000  pos=2
+  HEDGE SELL 11076 RTM  (Δ was +11076)
+
+[tick 253 +27]  RTM=$52.05  RV=12.0%  Δ=-1914/11000  pos=2
+
+[tick 254 +28]  RTM=$51.69  RV=12.0%  Δ=-17093/11000  pos=2
+  HEDGE BUY  17093 RTM  (Δ was -17093)
+  [hedge error] BUY 7093 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=7093&action=BUY
+
+[tick 255 +29]  RTM=$51.77  RV=12.0%  Δ=-286/11000  pos=2
+
+[tick 256 +30]  RTM=$51.58  RV=12.0%  Δ=-10383/11000  pos=2
+  HEDGE BUY  10383 RTM  (Δ was -10383)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 257 +31]  RTM=$51.41  RV=12.0%  Δ=-16350/11000  pos=2
+  HEDGE BUY  16350 RTM  (Δ was -16350)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 258 +32]  RTM=$51.55  RV=12.0%  Δ=-11226/11000  pos=2
+  HEDGE BUY  11226 RTM  (Δ was -11226)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 259 +33]  RTM=$51.12  RV=12.0%  Δ=-30341/11000  pos=2
+  HEDGE BUY  30341 RTM  (Δ was -30341)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 260 +34]  RTM=$51.57  RV=12.0%  Δ=-8857/11000  pos=2
+  HEDGE BUY  8857 RTM  (Δ was -8857)
+  [hedge error] BUY 8857 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=8857&action=BUY
+
+[tick 261 +35]  RTM=$51.88  RV=12.0%  Δ=4957/11000  pos=2
+
+[tick 262 +36]  RTM=$52.22  RV=12.0%  Δ=15922/11000  pos=2
+  HEDGE SELL 15922 RTM  (Δ was +15922)
+
+[tick 263 +37]  RTM=$52.64  RV=12.0%  Δ=12475/11000  pos=2
+  HEDGE SELL 12475 RTM  (Δ was +12475)
+
+[tick 265 +39]  RTM=$52.70  RV=12.0%  Δ=1838/11000  pos=2
+
+[tick 265 +39]  RTM=$52.70  RV=12.0%  Δ=1838/11000  pos=2
+
+[tick 266 +40]  RTM=$52.84  RV=12.0%  Δ=4203/11000  pos=2
+
+[tick 268 +42]  RTM=$52.83  RV=12.0%  Δ=7406/11000  pos=2
+
+[tick 269 +43]  RTM=$52.88  RV=12.0%  Δ=5975/11000  pos=2
+
+[tick 270 +44]  RTM=$52.93  RV=12.0%  Δ=7885/11000  pos=2
+
+[tick 270 +44]  RTM=$52.93  RV=12.0%  Δ=7885/11000  pos=2
+
+[tick 271 +45]  RTM=$52.76  RV=12.0%  Δ=5301/11000  pos=2
+
+[tick 272 +46]  RTM=$52.83  RV=12.0%  Δ=7388/11000  pos=2
+
+[tick 273 +47]  RTM=$52.88  RV=12.0%  Δ=9506/11000  pos=2
+  HEDGE SELL 9506 RTM  (Δ was +9506)
+
+[tick 275 +49]  RTM=$52.58  RV=12.0%  Δ=-6993/11000  pos=2
+
+[tick 276 +50]  RTM=$52.52  RV=12.0%  Δ=-7442/11000  pos=2
+
+[tick 277 +51]  RTM=$52.66  RV=12.0%  Δ=-2988/11000  pos=2
+
+[tick 278 +52]  RTM=$52.14  RV=12.0%  Δ=-17268/11000  pos=2
+  HEDGE BUY  17268 RTM  (Δ was -17268)
+
+[tick 279 +53]  RTM=$51.88  RV=12.0%  Δ=-9150/11000  pos=2
+  HEDGE BUY  9150 RTM  (Δ was -9150)
+
+[tick 280 +54]  RTM=$51.38  RV=12.0%  Δ=-25227/11000  pos=2
+  HEDGE BUY  25227 RTM  (Δ was -25227)
+  [hedge error] BUY 10000 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=10000&action=BUY
+
+[tick 281 +55]  RTM=$51.56  RV=12.0%  Δ=-4534/11000  pos=2
+
+[tick 282 +56]  RTM=$51.60  RV=12.0%  Δ=-1710/11000  pos=2
+
+[tick 283 +57]  RTM=$51.71  RV=12.0%  Δ=5139/11000  pos=2
+
+[tick 284 +58]  RTM=$51.64  RV=12.0%  Δ=2241/11000  pos=2
+
+[tick 285 +59]  RTM=$51.69  RV=12.0%  Δ=5748/11000  pos=2
+  [unwind] sub-heat tick 59
+  [close all] 2 position(s)
+  SELL 100x RTM1P51
+  BUY  100x RTM1P45
+  SELL 100x RTM1P51
+  BUY  100x RTM1P45
+  SELL 100x RTM1P51
+  BUY  100x RTM1P45
+  SELL 100x RTM1P51
+  BUY  100x RTM1P45
+  SELL 100x RTM1P51
+  BUY  100x RTM1P45
+  SELL 100x RTM1P51
+  BUY  100x RTM1P45
+  SELL 100x RTM1P51
+  BUY  100x RTM1P45
+  SELL 100x RTM1P51
+  BUY   50x RTM1P45
+  SELL 100x RTM1P51
+  SELL 100x RTM1P51
+  SELL 100x RTM1P51
+  SELL 100x RTM1P51
+  SELL 100x RTM1P51
+  SELL 100x RTM1P51
+  SELL 100x RTM1P51
+  SELL 100x RTM1P51
+  SELL 100x RTM1P51
+  SELL  50x RTM1P51
+  HEDGE SELL 47439 RTM  (Δ was +47439)
+
+[tick 289 +63]  RTM=$52.11  RV=12.0%  Δ=0/11000  pos=0
+
+[tick 290 +64]  RTM=$52.24  RV=12.0%  Δ=0/11000  pos=0
+
+[tick 291 +65]  RTM=$52.28  RV=12.0%  Δ=0/11000  pos=0
+
+[tick 292 +66]  RTM=$52.34  RV=12.0%  Δ=0/11000  pos=0
+
+[tick 293 +67]  RTM=$52.05  RV=12.0%  Δ=0/11000  pos=0
+
+[tick 294 +68]  RTM=$52.24  RV=12.0%  Δ=0/11000  pos=0
+
+[tick 295 +69]  RTM=$52.03  RV=12.0%  Δ=0/11000  pos=0
+
+[tick 296 +70]  RTM=$52.32  RV=12.0%  Δ=0/11000  pos=0
+
+[tick 297 +71]  RTM=$52.34  RV=12.0%  Δ=0/11000  pos=0
+
+[tick 298 +72]  RTM=$52.23  RV=12.0%  Δ=0/11000  pos=0
+
+[tick 299 +73]  RTM=$52.23  RV=12.0%  Δ=0/11000  pos=0
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+[waiting] case status: STOPPED
+
+[tick 0 +74]  RTM=$0.00  RV=12.0%  Δ=0/11000  pos=0
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 1 +0]  RTM=$50.00  RV=12.0%  Δ=0/12000  pos=0
+  [build] RV=12.0%
+    PRIMARY   SELL 986x RTM1C50  edge=-1.299
+  SELL 100x RTM1C50
+  SELL 100x RTM1C50
+  SELL 100x RTM1C50
+  SELL 100x RTM1C50
+  SELL 100x RTM1C50
+  SELL 100x RTM1C50
+  SELL 100x RTM1C50
+  SELL 100x RTM1C50
+  SELL 100x RTM1C50
+  SELL  86x RTM1C50
+  HEDGE BUY  51262 RTM  (Δ was -51262)
+  [hedge error] BUY 1262 RTM: 500 Server Error: Internal Server Error for url: http://localhost:9999/v1/orders?ticker=RTM&type=MARKET&quantity=1262&action=BUY
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 4 +3]  RTM=$49.51  RV=12.0%  Δ=2972/12000  pos=1
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 5 +4]  RTM=$49.81  RV=12.0%  Δ=590/12000  pos=1
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 6 +5]  RTM=$49.71  RV=12.0%  Δ=1144/12000  pos=1
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 7 +6]  RTM=$49.88  RV=12.0%  Δ=-200/12000  pos=1
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 8 +7]  RTM=$49.97  RV=12.0%  Δ=-1010/12000  pos=1
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 9 +8]  RTM=$50.08  RV=12.0%  Δ=-1819/12000  pos=1
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 10 +9]  RTM=$49.94  RV=12.0%  Δ=-680/12000  pos=1
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 11 +10]  RTM=$49.56  RV=12.0%  Δ=3106/12000  pos=1
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 12 +11]  RTM=$49.64  RV=12.0%  Δ=2240/12000  pos=1
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 13 +12]  RTM=$49.90  RV=12.0%  Δ=-55/12000  pos=1
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 14 +13]  RTM=$49.82  RV=12.0%  Δ=512/12000  pos=1
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 15 +14]  RTM=$49.92  RV=12.0%  Δ=-338/12000  pos=1
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 16 +15]  RTM=$49.94  RV=12.0%  Δ=-476/12000  pos=1
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 17 +16]  RTM=$50.09  RV=12.0%  Δ=-1843/12000  pos=1
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 18 +17]  RTM=$49.96  RV=12.0%  Δ=-692/12000  pos=1
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 19 +18]  RTM=$50.16  RV=12.0%  Δ=-2447/12000  pos=1
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 20 +19]  RTM=$50.10  RV=12.0%  Δ=-1938/12000  pos=1
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 21 +20]  RTM=$50.08  RV=12.0%  Δ=-1723/12000  pos=1
+[news] delta_limit=12000  penalty=4.0%
+
+[tick 22 +21]  RTM=$50.17  RV=12.0%  Δ=-2543/12000  pos=1
