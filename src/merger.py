@@ -14,7 +14,14 @@ import numpy as np
 import requests
 from joblib import load
 
-API_KEY_DEFAULT = "8NKMTW4W"
+from dotenv import load_dotenv
+from os import getenv
+from pathlib import Path
+
+DOTENV_PATH = Path(__file__).parent / ".env"
+load_dotenv(DOTENV_PATH)
+API_KEY_DEFAULT = getenv("ROT_API_KEY")
+API_PORT = getenv("ROT_API_PORT")
 BASE_URL = "http://localhost:9999/v1"
 MAX_ORDER_SIZE = 5000
 COMMISSION = 0.02
