@@ -32,14 +32,17 @@ TRADING_YEAR_DAYS  = 240
 MONTH_DAYS         = 20
 OPTION_MULTIPLIER  = 100  # shares per contract (100:1)
 
-MAX_BATCH_SIZE      = 100   # max contracts per single order (API limit)
-PRIMARY_QTY         = 1750  # contracts for the best-edge position
-SECONDARY_QTY       = 750   # contracts for the best opposite-direction position
-MIN_EDGE            = 0.10  # minimum edge to open a new position
-DEFAULT_DELTA_LIMIT = 1000  # fallback delta limit until news arrives
-HEDGE_BAND          = 25    # only re-hedge in hold phase when |delta| exceeds this
-SUBHEAT_TICKS       = 75    # ticks per sub-heat (options expiry cycle)
-UNWIND_AT_TICK      = 50    # start unwinding at this tick within each sub-heat
+MAX_BATCH_SIZE      = 100    # max contracts per single option order (API limit)
+RTM_MAX_ORDER       = 10000  # max shares per single RTM order (API limit)
+RTM_SHARE_LIMIT     = 50000  # RTM net position limit
+OPTIONS_NET_LIMIT   = 1000   # options net limit (|long - short| contracts)
+PRIMARY_QTY         = 1750   # contracts for the best-edge position (with secondary)
+SECONDARY_QTY       = 750    # contracts for the best opposite-direction position
+MIN_EDGE            = 0.10   # minimum edge to open a new position
+DEFAULT_DELTA_LIMIT = 1000   # fallback delta limit until news arrives
+HEDGE_BAND          = 25     # only re-hedge in hold phase when |delta| exceeds this
+SUBHEAT_TICKS       = 75     # ticks per sub-heat (options expiry cycle)
+UNWIND_AT_TICK      = 59     # close at this offset within sub-heat (abs ticks 60,135,210,285)
 
 # ── Shared state ───────────────────────────────────────────────────────────────
 
@@ -52,7 +55,6 @@ _state: dict = {
     "delta_limit":     DEFAULT_DELTA_LIMIT,
     "penalty_pct":     0.0,
     "last_news_id":    0,
-    "rv_at_build":     None,  # realized_vol when we last built the position
     "case_status":     "STOPPED",
     "ticks_left":      9999,
     "case_tick":       0,
@@ -180,7 +182,7 @@ def _sync_state(tapi: TradingAPI) -> dict:
     ticks_left  = case["ticks_per_period"] - tick
     _state["ticks_left"] = ticks_left
     _state["case_tick"]  = tick
-    ticks_left_in_subheat = SUBHEAT_TICKS - (tick % SUBHEAT_TICKS)
+    ticks_left_in_subheat = SUBHEAT_TICKS - ((tick - 1) % SUBHEAT_TICKS)
     _state["tte"] = max(0.0, ticks_left_in_subheat / SUBHEAT_TICKS) * (MONTH_DAYS / TRADING_YEAR_DAYS)
 
     securities = tapi.get_securities()
@@ -255,29 +257,39 @@ def _build_position(tapi: TradingAPI, prices: dict) -> None:
     signals = _identify_mispricings(prices)
     if not signals:
         print("  [build] no mispricings above threshold")
-        _state["rv_at_build"] = _state["realized_vol"]
         return
 
     p_ticker, p_action, p_edge, p_abs_delta = signals[0]
     p_sign = _position_signed_delta(p_ticker, p_action, p_abs_delta)
 
     def is_opposite(s) -> bool:
-        return _position_signed_delta(s[0], s[1], s[3]) * p_sign < 0
+        # Must be opposite action (keeps net position within |long-short| limit)
+        # AND opposite signed delta (partially offsets primary's delta exposure)
+        return (s[1] != p_action
+                and _position_signed_delta(s[0], s[1], s[3]) * p_sign < 0)
 
-    # Find best truly-opposite-delta secondary; relax min_edge if needed
+    # Find secondary: prefer opposite-action + opposite-delta (reduces net delta);
+    # fall back to any opposite-action option — there's always some edge at week start.
+    all_sigs_any = _identify_mispricings(prices, min_edge=0.0)
     sec = next((s for s in signals[1:] if is_opposite(s)), None)
     if sec is None:
-        all_sigs = _identify_mispricings(prices, min_edge=0.0)
-        sec = next((s for s in all_sigs if s[0] != p_ticker and is_opposite(s)), None)
+        sec = next((s for s in all_sigs_any if s[0] != p_ticker and is_opposite(s)), None)
+    if sec is None:
+        # No delta-opposite found; take best opposite-action regardless of delta sign
+        sec = next((s for s in all_sigs_any if s[0] != p_ticker and s[1] != p_action), None)
 
     s_ticker = sec[0] if sec else None
     s_action = sec[1] if sec else None
     s_edge   = sec[2] if sec else 0.0
     s_total  = SECONDARY_QTY if sec else 0
 
-    # Without a secondary offset, primary is capped so net stays within limit:
-    # PRIMARY_QTY - SECONDARY_QTY = 1000 = net limit
-    p_total = PRIMARY_QTY if sec else (PRIMARY_QTY - SECONDARY_QTY)
+    if sec:
+        p_total = PRIMARY_QTY
+    else:
+        # No secondary: cap by options net limit AND by how much RTM can hedge
+        delta_per_contract = p_abs_delta * OPTION_MULTIPLIER
+        max_by_rtm = int(RTM_SHARE_LIMIT / max(delta_per_contract, 1))
+        p_total = min(OPTIONS_NET_LIMIT, max_by_rtm)
 
     print(f"  [build] RV={_state['realized_vol']:.1%}")
     print(f"    PRIMARY   {p_action:4s} {p_total}x {p_ticker}  edge={p_edge:+.3f}")
@@ -301,7 +313,6 @@ def _build_position(tapi: TradingAPI, prices: dict) -> None:
             if p_sent < p_total or s_sent < s_total:
                 time.sleep(0.1)
 
-    _state["rv_at_build"] = _state["realized_vol"]
 
 
 def _close_all(tapi: TradingAPI) -> None:
@@ -402,19 +413,41 @@ def _execute_hedge(tapi: TradingAPI, force: bool = False) -> None:
     if shares == 0:
         return
 
-    action = "BUY" if shares > 0 else "SELL"
-    qty    = abs(shares)
-    try:
-        tapi.post_order("RTM", "MARKET", qty, action)
-        _state["rtm_position"] += shares
-        print(f"  HEDGE {action:4s} {qty} RTM  (Δ was {delta:+.0f})")
-    except Exception as e:
-        print(f"  [hedge error] {e}")
+    action    = "BUY" if shares > 0 else "SELL"
+    total_qty = abs(shares)
+    sent      = 0
+    print(f"  HEDGE {action:4s} {total_qty} RTM  (Δ was {delta:+.0f})")
+    while sent < total_qty:
+        batch = min(RTM_MAX_ORDER, total_qty - sent)
+        try:
+            tapi.post_order("RTM", "MARKET", batch, action)
+            _state["rtm_position"] += batch if action == "BUY" else -batch
+            sent += batch
+        except Exception as e:
+            print(f"  [hedge error] {action} {batch} RTM: {e}")
+            break
+        if sent < total_qty:
+            time.sleep(0.1)
 
 
 # ── Main loop ──────────────────────────────────────────────────────────────────
 
 def run_trading_loop() -> None:
+    import sys
+
+    class _Tee:
+        def __init__(self, *streams):
+            self.streams = streams
+        def write(self, s):
+            for st in self.streams:
+                st.write(s)
+        def flush(self):
+            for st in self.streams:
+                st.flush()
+
+    _log = open("logs.txt", "a")
+    sys.stdout = _Tee(sys.__stdout__, _log)
+
     tapi = TradingAPI(API_KEY, port=API_PORT)
 
     print("=" * 60)
@@ -431,7 +464,7 @@ def run_trading_loop() -> None:
                 time.sleep(1)
                 continue
 
-            tick_in_heat = _state["case_tick"] % SUBHEAT_TICKS
+            tick_in_heat = (_state["case_tick"] - 1) % SUBHEAT_TICKS
             print(
                 f"\n[tick {_state['case_tick']} +{tick_in_heat}]"
                 f"  RTM=${_state['rtm_price']:.2f}"
@@ -440,30 +473,25 @@ def run_trading_loop() -> None:
                 f"  pos={len(_state['positions'])}"
             )
 
-            rv = _state["realized_vol"]
-
-            # Time unwind: close at tick 50, 125, 200, 275 (50 into each sub-heat)
-            if _state["positions"] and tick_in_heat >= UNWIND_AT_TICK:
-                print(f"  [time unwind] sub-heat tick {tick_in_heat}")
-                _close_all(tapi)
-                _execute_hedge(tapi, force=True)
-                _state["rv_at_build"] = None  # arm for next vol announcement
-                time.sleep(1)
-                continue
-
-            # New vol reading → close old position and build fresh maximum position
-            if rv != _state["rv_at_build"]:
+            if tick_in_heat >= UNWIND_AT_TICK:
+                # ── Unwind phase (ticks 60-74): close and stay flat ──────────
                 if _state["positions"]:
-                    print(f"  [vol update] {_state['rv_at_build']:.1%} → {rv:.1%}, rebuilding")
+                    print(f"  [unwind] sub-heat tick {tick_in_heat}")
                     _close_all(tapi)
                     _execute_hedge(tapi, force=True)
+                    time.sleep(1)
+                    continue
+
+            elif not _state["positions"]:
+                # ── Build phase (tick 0 of each sub-heat, positions empty) ───
                 _build_position(tapi, prices)
                 _execute_hedge(tapi, force=True)
                 time.sleep(1)
                 continue
 
-            # Holding: banded re-hedge only
-            _execute_hedge(tapi)
+            else:
+                # ── Hold phase: banded re-hedge only ─────────────────────────
+                _execute_hedge(tapi)
 
         except Exception as e:
             print(f"[loop error] {e}")
