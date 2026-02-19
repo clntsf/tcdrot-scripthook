@@ -1,574 +1,432 @@
 """
 Volatility Arbitrage Trading Module for RITC 2026
-By Claude
 
-This module implements volatility arbitrage strategies by:
-1. Calculating implied volatility from market prices
-2. Comparing to analyst-forecasted realized volatility
-3. Identifying mispriced options
-4. Executing trades with delta hedging
+Strategy: compare implied vol (from market prices) to realized vol (from news)
+and trade the difference, delta-hedging with RTM.
 """
 
 import math
-from typing import Dict, List, Tuple, Optional
-from dataclasses import dataclass
-from api import TradingAPI
+import re
+import time
+from typing import Optional
 
-# Option ticker constants
-STRIKES = [45, 46, 47, 48, 49, 50, 51, 52, 53, 54]
-CALL_TICKERS = [f"RTM1C{strike}" for strike in STRIKES]
-PUT_TICKERS = [f"RTM1P{strike}" for strike in STRIKES]
+from api import TradingAPI
+from dotenv import load_dotenv
+from os import getenv
+from pathlib import Path
+
+# ── Config ─────────────────────────────────────────────────────────────────────
+
+STRIKES            = [45, 46, 47, 48, 49, 50, 51, 52, 53, 54]
+CALL_TICKERS       = [f"RTM1C{s}" for s in STRIKES]
+PUT_TICKERS        = [f"RTM1P{s}" for s in STRIKES]
 ALL_OPTION_TICKERS = CALL_TICKERS + PUT_TICKERS
 
-API_KEY = "YOUR_API_KEY"
+DOTENV_PATH = Path(__file__).parent / ".env"
+load_dotenv(DOTENV_PATH)
+API_KEY = getenv("ROT_API_KEY")
 
-# Trading constants
-RISK_FREE_RATE = 0.0  # r = 0% as specified
-TRADING_YEAR_DAYS = 240  # 240 trading days per year
-MONTH_DAYS = 20  # 20 trading days per month
-OPTION_MULTIPLIER = 100  # Each contract represents 100 shares
+RISK_FREE_RATE     = 0.0
+TRADING_YEAR_DAYS  = 240
+MONTH_DAYS         = 20
+OPTION_MULTIPLIER  = 1   # shares per contract
+
+MAX_BATCH_SIZE      = 100   # max contracts per single order (API limit)
+PRIMARY_QTY         = 1750  # contracts for the best-edge position
+SECONDARY_QTY       = 750   # contracts for the best opposite-direction position
+MIN_EDGE            = 0.10  # minimum edge to open a new position
+CLOSE_THRESHOLD     = 0.05  # edge threshold to close — pragmatic, not hair-trigger
+DEFAULT_DELTA_LIMIT = 1000  # fallback delta limit until news arrives
+TIME_UNWIND_TICKS   = 5     # force-close this many ticks before end of sub-heat
+HEDGE_BAND          = 200   # only re-hedge in hold phase when |delta| exceeds this
+
+# ── Shared state ───────────────────────────────────────────────────────────────
+
+_state: dict = {
+    "rtm_price":       50.0,
+    "tte":             MONTH_DAYS / TRADING_YEAR_DAYS,   # years to expiry
+    "rtm_position":    0,
+    "positions":       {},   # ticker -> signed qty (+ long, - short)
+    "realized_vol":    0.35,
+    "delta_limit":     DEFAULT_DELTA_LIMIT,
+    "penalty_pct":     0.0,
+    "last_news_id":    0,
+    "rv_at_build":     None,  # realized_vol when we last built the position
+    "case_status":     "STOPPED",
+    "ticks_left":      9999,
+}
+
+# ── Black-Scholes (pure functions) ─────────────────────────────────────────────
+
+def _norm_cdf(x: float) -> float:
+    """Standard normal CDF via Abramowitz & Stegun polynomial approximation."""
+    a1, a2, a3, a4, a5, p = (
+        0.254829592, -0.284496736, 1.421413741,
+        -1.453152027, 1.061405429, 0.3275911,
+    )
+    sign = 1 if x >= 0 else -1
+    x = abs(x) / math.sqrt(2.0)
+    t = 1.0 / (1.0 + p * x)
+    y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * math.exp(-x * x)
+    return 0.5 * (1.0 + sign * y)
 
 
-@dataclass
-class OptionPosition:
-    """Represents a position in an option"""
-    ticker: str
-    quantity: int  # Number of contracts (positive = long, negative = short)
-    strike: float
-    is_call: bool
-    delta: float
-    entry_price: float = 0.0
+def _bs_price(S: float, K: float, T: float, r: float, sigma: float, is_call: bool) -> float:
+    if T <= 0:
+        return max(0.0, S - K) if is_call else max(0.0, K - S)
+    sigma = max(sigma, 1e-6)
+    sqrt_T = math.sqrt(T)
+    d1 = (math.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * sqrt_T)
+    d2 = d1 - sigma * sqrt_T
+    if is_call:
+        return max(0.0, S * _norm_cdf(d1) - K * math.exp(-r * T) * _norm_cdf(d2))
+    return max(0.0, K * math.exp(-r * T) * _norm_cdf(-d2) - S * _norm_cdf(-d1))
 
 
-@dataclass
-class TradeSignal:
-    """Represents a trading signal for an option"""
-    ticker: str
-    action: str  # 'BUY' or 'SELL'
-    quantity: int
-    market_price: float
-    fair_value: float
-    edge: float
-    implied_vol: float
-    realized_vol: float
-    delta: float
-
-
-class BlackScholesCalculator:
-    """Black-Scholes option pricing calculator"""
-    
-    @staticmethod
-    def norm_cdf(x: float) -> float:
-        """
-        Cumulative distribution function for standard normal distribution.
-        Uses polynomial approximation for accuracy without external dependencies.
-        """
-        # Constants for approximation
-        a1 =  0.254829592
-        a2 = -0.284496736
-        a3 =  1.421413741
-        a4 = -1.453152027
-        a5 =  1.061405429
-        p  =  0.3275911
-        
-        sign = 1 if x >= 0 else -1
-        x = abs(x) / math.sqrt(2.0)
-        
-        t = 1.0 / (1.0 + p * x)
-        y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * math.exp(-x * x)
-        
-        return 0.5 * (1.0 + sign * y)
-    
-    @staticmethod
-    def calculate_d1_d2(S: float, K: float, T: float, r: float, sigma: float) -> Tuple[float, float]:
-        """
-        Calculate d1 and d2 for Black-Scholes formula.
-        
-        Args:
-            S: Current stock price
-            K: Strike price
-            T: Time to expiration (in years)
-            r: Risk-free rate
-            sigma: Volatility (annualized)
-        
-        Returns:
-            Tuple of (d1, d2)
-        """
-        if T <= 0 or sigma <= 0:
-            # Handle edge cases
-            if T <= 0:
-                return (float('inf') if S > K else float('-inf')), (float('inf') if S > K else float('-inf'))
-            if sigma <= 0:
-                sigma = 0.0001  # Small non-zero value
-        
-        sqrt_T = math.sqrt(T)
-        d1 = (math.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * sqrt_T)
-        d2 = d1 - sigma * sqrt_T
-        
-        return d1, d2
-    
-    @classmethod
-    def call_price(cls, S: float, K: float, T: float, r: float, sigma: float) -> float:
-        """Calculate European call option price using Black-Scholes"""
-        if T <= 0:
-            return max(0, S - K)
-        
-        d1, d2 = cls.calculate_d1_d2(S, K, T, r, sigma)
-        
-        call = S * cls.norm_cdf(d1) - K * math.exp(-r * T) * cls.norm_cdf(d2)
-        return max(0, call)
-    
-    @classmethod
-    def put_price(cls, S: float, K: float, T: float, r: float, sigma: float) -> float:
-        """Calculate European put option price using Black-Scholes"""
-        if T <= 0:
-            return max(0, K - S)
-        
-        d1, d2 = cls.calculate_d1_d2(S, K, T, r, sigma)
-        
-        put = K * math.exp(-r * T) * cls.norm_cdf(-d2) - S * cls.norm_cdf(-d1)
-        return max(0, put)
-    
-    @classmethod
-    def call_delta(cls, S: float, K: float, T: float, r: float, sigma: float) -> float:
-        """Calculate delta for call option"""
-        if T <= 0:
+def _bs_delta(S: float, K: float, T: float, r: float, sigma: float, is_call: bool) -> float:
+    if T <= 0:
+        if is_call:
             return 1.0 if S > K else 0.0
-        
-        d1, _ = cls.calculate_d1_d2(S, K, T, r, sigma)
-        return cls.norm_cdf(d1)
-    
-    @classmethod
-    def put_delta(cls, S: float, K: float, T: float, r: float, sigma: float) -> float:
-        """Calculate delta for put option"""
-        if T <= 0:
-            return -1.0 if S < K else 0.0
-        
-        d1, _ = cls.calculate_d1_d2(S, K, T, r, sigma)
-        return cls.norm_cdf(d1) - 1.0
-    
-    @classmethod
-    def implied_volatility(cls, market_price: float, S: float, K: float, T: float, 
-                          r: float, is_call: bool, tol: float = 0.0001, max_iter: int = 100) -> Optional[float]:
-        """
-        Calculate implied volatility using bisection method.
-        
-        Args:
-            market_price: Observed market price
-            S: Current stock price
-            K: Strike price
-            T: Time to expiration (in years)
-            r: Risk-free rate
-            is_call: True for call, False for put
-            tol: Tolerance for convergence
-            max_iter: Maximum iterations
-        
-        Returns:
-            Implied volatility or None if not found
-        """
-        if T <= 0:
-            return None
-        
-        # Check if price is arbitrage-free
-        intrinsic = max(0, S - K) if is_call else max(0, K - S)
-        if market_price < intrinsic - tol:
-            return None  # Price below intrinsic value
-        
-        # Bisection method bounds
-        sigma_low = 0.001  # 0.1% vol
-        sigma_high = 5.0   # 500% vol
-        
-        price_func = cls.call_price if is_call else cls.put_price
-        
-        for _ in range(max_iter):
-            sigma_mid = (sigma_low + sigma_high) / 2
-            price_mid = price_func(S, K, T, r, sigma_mid)
-            
-            if abs(price_mid - market_price) < tol:
-                return sigma_mid
-            
-            if price_mid < market_price:
-                sigma_low = sigma_mid
-            else:
-                sigma_high = sigma_mid
-        
-        # Return best estimate if didn't converge
-        return (sigma_low + sigma_high) / 2
+        return -1.0 if S < K else 0.0
+    sigma = max(sigma, 1e-6)
+    d1 = (math.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (math.sqrt(T) * sigma)
+    nd1 = _norm_cdf(d1)
+    return nd1 if is_call else nd1 - 1.0
 
 
-class VolatilityArbitrageTrader:
-    """Main trading logic for volatility arbitrage"""
-    
-    def __init__(self, rtm_price: float, time_to_expiration_days: float = 20):
-        """
-        Initialize the trader.
-        
-        Args:
-            rtm_price: Current price of RTM ETF
-            time_to_expiration_days: Days until option expiration (default 20)
-        """
-        self.rtm_price = rtm_price
-        self.time_to_expiration = time_to_expiration_days / TRADING_YEAR_DAYS
-        self.bs_calc = BlackScholesCalculator()
-        self.positions: List[OptionPosition] = []
-        self.rtm_position = 0  # Net RTM shares held
-        self.last_realized_vol = 0.35  # Updated each loop tick from analyst feed
-        self.tapi = TradingAPI(API_KEY)
-    
-    def update_time_to_expiration(self, days_remaining: float):
-        """Update time to expiration as sub-heat progresses"""
-        self.time_to_expiration = days_remaining / TRADING_YEAR_DAYS
-    
-    def update_rtm_price(self, new_price: float):
-        """Update RTM price"""
-        self.rtm_price = new_price
-    
-    def parse_ticker(self, ticker: str) -> Tuple[bool, float]:
-        """
-        Parse option ticker to extract type and strike.
-        
-        Returns:
-            (is_call, strike_price)
-        """
-        # Format: RTM1C50 or RTM1P50
-        is_call = 'C' in ticker
-        strike = float(ticker.split('C' if is_call else 'P')[1])
-        return is_call, strike
-    
-    def calculate_implied_volatility(self, ticker: str, market_price: float) -> Optional[float]:
-        """Calculate implied volatility for an option"""
-        is_call, strike = self.parse_ticker(ticker)
-        
-        return self.bs_calc.implied_volatility(
-            market_price=market_price,
-            S=self.rtm_price,
-            K=strike,
-            T=self.time_to_expiration,
-            r=RISK_FREE_RATE,
-            is_call=is_call
-        )
-    
-    def calculate_fair_value(self, ticker: str, realized_vol: float) -> float:
-        """Calculate fair value of option using realized volatility"""
-        is_call, strike = self.parse_ticker(ticker)
-        
-        if is_call:
-            return self.bs_calc.call_price(
-                S=self.rtm_price,
-                K=strike,
-                T=self.time_to_expiration,
-                r=RISK_FREE_RATE,
-                sigma=realized_vol
-            )
+def _implied_vol(
+    mkt: float, S: float, K: float, T: float, r: float, is_call: bool,
+    tol: float = 0.0001, max_iter: int = 100,
+) -> Optional[float]:
+    if T <= 0:
+        return None
+    intrinsic = max(0.0, S - K) if is_call else max(0.0, K - S)
+    if mkt < intrinsic - tol:
+        return None
+    lo, hi = 0.001, 5.0
+    for _ in range(max_iter):
+        mid = (lo + hi) / 2
+        p = _bs_price(S, K, T, r, mid, is_call)
+        if abs(p - mkt) < tol:
+            return mid
+        if p < mkt:
+            lo = mid
         else:
-            return self.bs_calc.put_price(
-                S=self.rtm_price,
-                K=strike,
-                T=self.time_to_expiration,
-                r=RISK_FREE_RATE,
-                sigma=realized_vol
+            hi = mid
+    return (lo + hi) / 2
+
+
+# ── Ticker helpers ─────────────────────────────────────────────────────────────
+
+def _parse_ticker(ticker: str) -> tuple:
+    """Returns (is_call: bool, strike: float)."""
+    is_call = "C" in ticker
+    strike = float(ticker.split("C" if is_call else "P")[1])
+    return is_call, strike
+
+
+# ── News ───────────────────────────────────────────────────────────────────────
+
+def _poll_news(tapi: TradingAPI) -> None:
+    """Fetch new news items and update state (delta limit, realized vol)."""
+    try:
+        since = _state["last_news_id"] if _state["last_news_id"] > 0 else None
+        items = tapi.get_news(since=since)
+    except Exception as e:
+        print(f"[news error] {e}")
+        return
+
+    if not items:
+        return
+
+    for item in items:
+        nid      = item.get("news_id", 0)
+        headline = (item.get("headline") or "").lower()
+        body     = item.get("body") or ""
+
+        _state["last_news_id"] = max(_state["last_news_id"], nid)
+
+        # Parse delta limit and penalty announcement (tick 1)
+        if "delta limit" in headline:
+            m_limit   = re.search(r"\s([0-9]+)\s", body)
+            m_penalty = re.search(r"([\d.]+)\s*%", body)
+            if m_limit:
+                _state["delta_limit"] = int(m_limit.group(1))
+            if m_penalty:
+                _state["penalty_pct"] = float(m_penalty.group(1)) / 100
+            print(
+                f"[news] delta_limit={_state['delta_limit']}"
+                f"  penalty={_state['penalty_pct']:.1%}"
             )
-    
-    def calculate_delta(self, ticker: str, volatility: float) -> float:
-        """Calculate option delta"""
-        is_call, strike = self.parse_ticker(ticker)
-        
-        if is_call:
-            return self.bs_calc.call_delta(
-                S=self.rtm_price,
-                K=strike,
-                T=self.time_to_expiration,
-                r=RISK_FREE_RATE,
-                sigma=volatility
-            )
-        else:
-            return self.bs_calc.put_delta(
-                S=self.rtm_price,
-                K=strike,
-                T=self.time_to_expiration,
-                r=RISK_FREE_RATE,
-                sigma=volatility
-            )
-    
-    def identify_mispricings(self, option_prices: Dict[str, float], 
-                            realized_vol: float, 
-                            min_edge: float = 0.05) -> List[TradeSignal]:
-        """
-        Identify mispriced options.
-        
-        Args:
-            option_prices: Dict mapping ticker to market price
-            realized_vol: True/realized volatility from analysts
-            min_edge: Minimum edge (fair_value - market_price) to trade
-        
-        Returns:
-            List of TradeSignal objects
-        """
-        signals = []
-        
-        for ticker, market_price in option_prices.items():
-            # Calculate implied volatility from market price
-            implied_vol = self.calculate_implied_volatility(ticker, market_price)
-            
-            if implied_vol is None:
-                continue  # Skip if can't calculate IV
-            
-            # Calculate fair value using realized volatility
-            fair_value = self.calculate_fair_value(ticker, realized_vol)
-            
-            # Calculate edge
-            edge = fair_value - market_price
-            
-            # Determine action
-            if abs(edge) < min_edge:
-                continue  # Not mispriced enough
-            
-            action = 'BUY' if edge > 0 else 'SELL'
-            
-            # Calculate delta for this option
-            delta = self.calculate_delta(ticker, realized_vol)
-            
-            signals.append(TradeSignal(
-                ticker=ticker,
-                action=action,
-                quantity=10,  # Start with 10 contracts as default
-                market_price=market_price,
-                fair_value=fair_value,
-                edge=edge,
-                implied_vol=implied_vol,
-                realized_vol=realized_vol,
-                delta=delta
-            ))
-        
-        # Sort by absolute edge (most mispriced first)
-        signals.sort(key=lambda x: abs(x.edge), reverse=True)
-        
-        return signals
-    
-    def calculate_portfolio_delta(self) -> float:
-        """Calculate total portfolio delta"""
-        option_delta = sum(pos.quantity * pos.delta * OPTION_MULTIPLIER for pos in self.positions)
-        rtm_delta = self.rtm_position * 1.0  # RTM shares have delta of 1
-        
-        return option_delta + rtm_delta
-    
-    def calculate_hedge_trade(self, target_delta: float = 0.0) -> Tuple[str, int]:
-        """
-        Calculate RTM trade needed to reach target delta.
-        
-        Returns:
-            (action, quantity) where action is 'BUY' or 'SELL'
-        """
-        current_delta = self.calculate_portfolio_delta()
-        delta_adjustment = target_delta - current_delta
-        
-        # Round to nearest share
-        shares_to_trade = round(delta_adjustment)
-        
-        if shares_to_trade > 0:
-            return 'BUY', shares_to_trade
-        elif shares_to_trade < 0:
-            return 'SELL', abs(shares_to_trade)
-        else:
-            return 'HOLD', 0
-    
-    def execute_trade(self, signal: TradeSignal) -> OptionPosition:
-        """Execute an option trade via the API and record the resulting position."""
-        self.tapi.post_order(signal.ticker, "MARKET", signal.quantity, signal.action)
+            continue
 
-        is_call, strike = self.parse_ticker(signal.ticker)
-        quantity = signal.quantity if signal.action == 'BUY' else -signal.quantity
-
-        position = OptionPosition(
-            ticker=signal.ticker,
-            quantity=quantity,
-            strike=strike,
-            is_call=is_call,
-            delta=signal.delta,
-            entry_price=signal.market_price
-        )
-
-        self.positions.append(position)
-
-        print(f"EXECUTED: {signal.action} {signal.quantity} contracts of {signal.ticker} @ ${signal.market_price:.2f}")
-        print(f"  Edge: ${signal.edge:.2f}, IV: {signal.implied_vol:.1%}, RV: {signal.realized_vol:.1%}")
-
-        return position
-    
-    def execute_hedge(self, action: str, quantity: int):
-        """Execute RTM hedge trade via the API."""
-        if action == 'HOLD' or quantity == 0:
-            return
-
-        if action == 'BUY':
-            self.tapi.buy("RTM1", quantity)
-            self.rtm_position += quantity
-        else:  # SELL
-            self.tapi.sell("RTM1", quantity)
-            self.rtm_position -= quantity
-
-        print(f"HEDGE: {action} {quantity} shares of RTM1 @ ${self.rtm_price:.2f}")
-        print(f"  New RTM position: {self.rtm_position} shares")
-
-    def sync_state(self) -> Dict[str, float]:
-        """
-        Fetch current market state from the API and update trader internals.
-        Returns the option price dict (bid/ask midpoint per ticker).
-        """
-        case = self.tapi.get_case()
-        ticks_left = case["ticks_per_period"] - case["tick"]
-        self.time_to_expiration = (ticks_left / case["ticks_per_period"]) * (MONTH_DAYS / TRADING_YEAR_DAYS)
-
-        securities = self.tapi.get_securities()
-        prices: Dict[str, float] = {}
-        new_positions: List[OptionPosition] = []
-
-        for sec in securities:
-            ticker = sec["ticker"]
-            bid, ask, last = sec.get("bid"), sec.get("ask"), sec.get("last")
-            mid = (bid + ask) / 2 if bid and ask else (last or 0.0)
-
-            if ticker == "RTM1":
-                self.rtm_price = mid
-                self.rtm_position = int(sec.get("position", 0))
-            elif ticker in ALL_OPTION_TICKERS:
-                prices[ticker] = mid
-                qty = int(sec.get("position", 0))
-                if qty != 0:
-                    is_call, strike = self.parse_ticker(ticker)
-                    delta = self.calculate_delta(ticker, self.last_realized_vol)
-                    new_positions.append(OptionPosition(
-                        ticker=ticker, quantity=qty, strike=strike,
-                        is_call=is_call, delta=delta, entry_price=mid
-                    ))
-
-        self.positions = new_positions
-        return prices
-
-    def check_limits(self) -> bool:
-        """Return True if there is headroom to add more positions (5% safety buffer)."""
-        for lim in self.tapi.get_limits():
-            if lim["gross"] >= lim["gross_limit"] * 0.95:
-                return False
-            if abs(lim["net"]) >= lim["net_limit"] * 0.95:
-                return False
-        return True
-
-    def calc_order_quantity(self) -> int:
-        """
-        Return per-trade contract size that spreads remaining net headroom evenly
-        across all option tickers, leaving room for future trades.
-        """
-        min_qty = float("inf")
-        for lim in self.tapi.get_limits():
-            headroom = lim["net_limit"] * 0.95 - abs(lim["net"])
-            per_trade = max(1, int(headroom // len(ALL_OPTION_TICKERS)))
-            min_qty = min(min_qty, per_trade)
-        return int(min_qty) if min_qty != float("inf") else 10
-
-    def close_corrected_positions(self, option_prices: Dict[str, float],
-                                  realized_vol: float, close_threshold: float = 0.03):
-        """
-        Close positions where the mispricing has been corrected by the market maker.
-        - Long positions: close when market price has risen (edge <= close_threshold)
-        - Short positions: close when market price has fallen (edge >= -close_threshold)
-        """
-        for pos in list(self.positions):
-            market_price = option_prices.get(pos.ticker)
-            if market_price is None:
-                continue
-            fair_value = self.calculate_fair_value(pos.ticker, realized_vol)
-            edge = fair_value - market_price
-            if pos.quantity > 0 and edge <= close_threshold:
-                self.tapi.post_order(pos.ticker, "MARKET", abs(pos.quantity), "SELL")
-                print(f"CLOSE LONG:  {pos.ticker} @ ${market_price:.2f} (fair=${fair_value:.2f}, edge=${edge:.2f})")
-            elif pos.quantity < 0 and edge >= -close_threshold:
-                self.tapi.post_order(pos.ticker, "MARKET", abs(pos.quantity), "BUY")
-                print(f"CLOSE SHORT: {pos.ticker} @ ${market_price:.2f} (fair=${fair_value:.2f}, edge=${edge:.2f})")
+        # Parse realized vol: exactly one % → point estimate; multiple → range, skip
+        pcts = re.findall(r"([\d.]+)\s*%", body)
+        if len(pcts) == 1:
+            vol = float(pcts[0]) / 100
+            _state["realized_vol"] = vol
+            print(f"[news] realized_vol → {vol:.1%}")
 
 
-def poll_option_prices(tapi: TradingAPI) -> Dict[str, float]:
-    """
-    Poll option prices from the RIT securities API.
-    Uses bid/ask midpoint as market price.
+# ── State sync ─────────────────────────────────────────────────────────────────
 
-    Returns:
-        Dict mapping option ticker to market price
-    """
+def _sync_state(tapi: TradingAPI) -> dict:
+    """Fetch market data, update _state, return {ticker: mid_price} for options."""
+    case = tapi.get_case()
+    _state["case_status"] = case.get("status", "STOPPED")
+    ticks_left  = case["ticks_per_period"] - case["tick"]
+    ticks_total = case["ticks_per_period"]
+    _state["ticks_left"] = ticks_left
+    _state["tte"] = max(0.0, ticks_left / ticks_total) * (MONTH_DAYS / TRADING_YEAR_DAYS)
+
     securities = tapi.get_securities()
-    prices = {}
+    prices: dict = {}
+    new_positions: dict = {}
+
     for sec in securities:
         ticker = sec["ticker"]
-        if ticker not in ALL_OPTION_TICKERS:
-            continue
-        bid = sec.get("bid")
-        ask = sec.get("ask")
-        if bid and ask:
-            prices[ticker] = (bid + ask) / 2
-        elif sec.get("last"):
-            prices[ticker] = sec["last"]
+        bid, ask, last = sec.get("bid"), sec.get("ask"), sec.get("last")
+        mid = (bid + ask) / 2 if bid and ask else (last or 0.0)
+
+        if ticker == "RTM":
+            _state["rtm_price"]    = mid
+            _state["rtm_position"] = int(sec.get("position", 0))
+        elif ticker in ALL_OPTION_TICKERS:
+            prices[ticker] = mid
+            qty = int(sec.get("position", 0))
+            if qty != 0:
+                new_positions[ticker] = qty
+
+    _state["positions"] = new_positions
     return prices
 
 
-def get_analyst_vol() -> float:
+# ── Portfolio delta ────────────────────────────────────────────────────────────
+
+def _portfolio_delta() -> float:
+    """Total signed delta in underlying shares (options + RTM hedge)."""
+    S  = _state["rtm_price"]
+    T  = _state["tte"]
+    rv = _state["realized_vol"]
+    opt_delta = 0.0
+    for ticker, qty in _state["positions"].items():
+        is_call, K = _parse_ticker(ticker)
+        d = _bs_delta(S, K, T, RISK_FREE_RATE, rv, is_call)
+        opt_delta += qty * d * OPTION_MULTIPLIER
+    return opt_delta + _state["rtm_position"]
+
+
+# ── Limits ─────────────────────────────────────────────────────────────────────
+
+
+def _build_position(tapi: TradingAPI, prices: dict) -> None:
     """
-    Dummy function to get analyst forecasted volatility.
-    Replace with actual news feed parser.
-    
-    Returns:
-        Realized volatility as a decimal (e.g., 0.35 for 35%)
+    Enter PRIMARY_QTY of the best-edge option and SECONDARY_QTY of the best
+    option in the opposite direction. Orders sent in MAX_BATCH_SIZE chunks.
     """
-    # Example - in reality, parse from RIT news feed
-    return 0.35  # 35% volatility
+    signals = _identify_mispricings(prices)
+    if not signals:
+        print("  [build] no mispricings above threshold")
+        _state["rv_at_build"] = _state["realized_vol"]
+        return
+
+    p_ticker, p_action, p_edge, _ = signals[0]
+    opposite = "BUY" if p_action == "SELL" else "SELL"
+    sec = next((s for s in signals[1:] if s[1] == opposite), None)
+
+    print(f"  [build] RV={_state['realized_vol']:.1%}")
+    print(f"    PRIMARY   {p_action:4s} {PRIMARY_QTY}x {p_ticker}  edge={p_edge:+.3f}")
+    _send_batches(tapi, p_ticker, p_action, PRIMARY_QTY)
+
+    if sec:
+        s_ticker, s_action, s_edge, _ = sec
+        print(f"    SECONDARY {s_action:4s} {SECONDARY_QTY}x {s_ticker}  edge={s_edge:+.3f}")
+        _send_batches(tapi, s_ticker, s_action, SECONDARY_QTY)
+
+    _state["rv_at_build"] = _state["realized_vol"]
 
 
-def run_trading_loop():
-    """Main polling loop: sync state, close corrected positions, open new trades, hedge, sleep."""
-    import time
+def _close_all(tapi: TradingAPI) -> None:
+    """Force-close every open option position (used on vol regime change)."""
+    for ticker, qty in list(_state["positions"].items()):
+        if qty == 0:
+            continue
+        action = "SELL" if qty > 0 else "BUY"
+        print(f"  FORCE CLOSE {ticker} ({qty:+d})")
+        _send_batches(tapi, ticker, action, abs(qty))
+    _state["positions"].clear()
 
-    # rtm_price and time_to_expiration will be overwritten by sync_state() on the first tick
-    trader = VolatilityArbitrageTrader(rtm_price=50.0, time_to_expiration_days=20)
+
+# ── Mispricings ────────────────────────────────────────────────────────────────
+
+def _identify_mispricings(prices: dict, min_edge: float = MIN_EDGE) -> list:
+    """
+    Return list of (ticker, action, edge, abs_delta) sorted by |edge| desc.
+    action is 'BUY' (underpriced) or 'SELL' (overpriced).
+    """
+    S  = _state["rtm_price"]
+    T  = _state["tte"]
+    rv = _state["realized_vol"]
+    signals = []
+
+    for ticker, mkt in prices.items():
+        is_call, K = _parse_ticker(ticker)
+        iv = _implied_vol(mkt, S, K, T, RISK_FREE_RATE, is_call)
+        if iv is None:
+            continue
+        fair  = _bs_price(S, K, T, RISK_FREE_RATE, rv, is_call)
+        edge  = fair - mkt
+        if abs(edge) < min_edge:
+            continue
+        delta = _bs_delta(S, K, T, RISK_FREE_RATE, rv, is_call)
+        signals.append((ticker, "BUY" if edge > 0 else "SELL", edge, abs(delta)))
+
+    signals.sort(key=lambda x: abs(x[2]), reverse=True)
+    return signals
+
+
+# ── Execution ──────────────────────────────────────────────────────────────────
+
+def _send_batches(tapi: TradingAPI, ticker: str, action: str, total: int) -> None:
+    """Send `total` contracts in MAX_BATCH_SIZE chunks."""
+    sent = 0
+    while sent < total:
+        batch = min(MAX_BATCH_SIZE, total - sent)
+        _execute_trade(tapi, ticker, action, batch)
+        sent += batch
+
+
+def _execute_trade(tapi: TradingAPI, ticker: str, action: str, qty: int) -> None:
+    try:
+        tapi.post_order(ticker, "MARKET", qty, action)
+        sign = 1 if action == "BUY" else -1
+        _state["positions"][ticker] = _state["positions"].get(ticker, 0) + sign * qty
+        print(f"  {action:4s} {qty:3d}x {ticker}")
+    except Exception as e:
+        print(f"  [order error] {action} {qty}x {ticker}: {e}")
+
+
+def _close_positions(tapi: TradingAPI, prices: dict) -> None:
+    S  = _state["rtm_price"]
+    T  = _state["tte"]
+    rv = _state["realized_vol"]
+
+    for ticker, qty in list(_state["positions"].items()):
+        mkt = prices.get(ticker)
+        if mkt is None or qty == 0:
+            continue
+        is_call, K = _parse_ticker(ticker)
+        fair = _bs_price(S, K, T, RISK_FREE_RATE, rv, is_call)
+        edge = fair - mkt
+
+        if qty > 0 and edge <= CLOSE_THRESHOLD:
+            try:
+                tapi.post_order(ticker, "MARKET", abs(qty), "SELL")
+                del _state["positions"][ticker]
+                print(f"  CLOSE LONG  {ticker}  edge={edge:+.2f}")
+            except Exception as e:
+                print(f"  [close error] {ticker}: {e}")
+        elif qty < 0 and edge >= -CLOSE_THRESHOLD:
+            try:
+                tapi.post_order(ticker, "MARKET", abs(qty), "BUY")
+                del _state["positions"][ticker]
+                print(f"  CLOSE SHORT {ticker}  edge={edge:+.2f}")
+            except Exception as e:
+                print(f"  [close error] {ticker}: {e}")
+
+
+def _execute_hedge(tapi: TradingAPI, force: bool = False) -> None:
+    """
+    Trade RTM to bring portfolio delta to zero, capped by RTM net headroom.
+    In the hold phase (force=False) skip if delta is within HEDGE_BAND to
+    avoid paying spreads on tiny re-hedges every tick.
+    """
+    delta  = _portfolio_delta()
+    shares = -round(delta)   # buy if delta < 0, sell if delta > 0
+    if shares == 0:
+        return
+    if not force and abs(shares) < HEDGE_BAND:
+        return
+
+    # Cap to available RTM net headroom
+    try:
+        for lim in tapi.get_limits():
+            if lim.get("ticker") == "RTM":
+                room = int(lim.get("net_limit", 50000) * 0.95 - abs(lim.get("net", 0)))
+                shares = max(-room, min(room, shares))
+                break
+    except Exception:
+        pass
+
+    if shares == 0:
+        return
+
+    action = "BUY" if shares > 0 else "SELL"
+    qty    = abs(shares)
+    try:
+        tapi.post_order("RTM", "MARKET", qty, action)
+        _state["rtm_position"] += shares
+        print(f"  HEDGE {action:4s} {qty} RTM  (Δ was {delta:+.0f})")
+    except Exception as e:
+        print(f"  [hedge error] {e}")
+
+
+# ── Main loop ──────────────────────────────────────────────────────────────────
+
+def run_trading_loop() -> None:
+    tapi = TradingAPI(API_KEY)
 
     print("=" * 60)
-    print("VOLATILITY ARBITRAGE TRADER — live loop started")
+    print("VOL ARBIT — live loop started")
     print("=" * 60)
 
     while True:
         try:
-            # 1. Sync market state and get current option prices
-            option_prices = trader.sync_state()
+            _poll_news(tapi)
+            prices = _sync_state(tapi)
 
-            # 2. Get analyst volatility forecast
-            realized_vol = get_analyst_vol()
-            trader.last_realized_vol = realized_vol
+            if _state["case_status"] != "ACTIVE":
+                print(f"[waiting] case status: {_state['case_status']}")
+                time.sleep(1)
+                continue
 
-            print(f"\n[tick] RTM1=${trader.rtm_price:.2f}  RV={realized_vol:.1%}"
-                  f"  T={trader.time_to_expiration * TRADING_YEAR_DAYS:.1f}d"
-                  f"  positions={len(trader.positions)}")
+            print(
+                f"\n[tick] RTM=${_state['rtm_price']:.2f}"
+                f"  RV={_state['realized_vol']:.1%}"
+                f"  tl={_state['ticks_left']}"
+                f"  Δ={_portfolio_delta():.0f}/{_state['delta_limit']}"
+                f"  pos={len(_state['positions'])}"
+            )
 
-            # 3. Close positions where mispricing has been corrected
-            trader.close_corrected_positions(option_prices, realized_vol)
+            rv    = _state["realized_vol"]
+            tl    = _state["ticks_left"]
 
-            # 4. Re-hedge after any closes
-            action, qty = trader.calculate_hedge_trade(target_delta=0.0)
-            trader.execute_hedge(action, qty)
+            # Time unwind: force-close within TIME_UNWIND_TICKS of sub-heat end
+            if _state["positions"] and tl <= TIME_UNWIND_TICKS:
+                print(f"  [time unwind] {tl} ticks left")
+                _close_all(tapi)
+                _execute_hedge(tapi, force=True)
+                _state["rv_at_build"] = None  # arm for next vol announcement
+                time.sleep(1)
+                continue
 
-            # 5. Identify and open new mispriced positions if within limits
-            if trader.check_limits():
-                signals = trader.identify_mispricings(option_prices, realized_vol, min_edge=0.10)
-                order_qty = trader.calc_order_quantity()
-                for signal in signals:
-                    if not trader.check_limits():
-                        break
-                    signal.quantity = order_qty
-                    trader.execute_trade(signal)
+            # New vol reading → close old position and build fresh maximum position
+            if rv != _state["rv_at_build"]:
+                if _state["positions"]:
+                    print(f"  [vol update] {_state['rv_at_build']:.1%} → {rv:.1%}, rebuilding")
+                    _close_all(tapi)
+                    _execute_hedge(tapi, force=True)
+                _build_position(tapi, prices)
+                _execute_hedge(tapi, force=True)
+                time.sleep(1)
+                continue
 
-            # 6. Re-hedge after new positions
-            action, qty = trader.calculate_hedge_trade(target_delta=0.0)
-            trader.execute_hedge(action, qty)
+            # Holding: only re-hedge if delta has drifted beyond HEDGE_BAND
+            _close_positions(tapi, prices)
+            _execute_hedge(tapi)  # banded — skips small drifts
 
         except Exception as e:
-            print(f"Loop error: {e}")
+            print(f"[loop error] {e}")
 
         time.sleep(1)
 
