@@ -38,7 +38,9 @@ RTM_SHARE_LIMIT     = 50000  # RTM net position limit
 OPTIONS_NET_LIMIT   = 1000   # options net limit (|long - short| contracts)
 PRIMARY_QTY         = 1750   # contracts for the best-edge position (with secondary)
 SECONDARY_QTY       = 750    # contracts for the best opposite-direction position
-MIN_EDGE            = 0.10   # minimum edge to open a new position
+MIN_EDGE            = 0.10   # minimum edge to open a new sell position
+SHORT_GAMMA_MIN_OTM = 4.0   # min |K - S| required to sell (avoid selling ATM)
+LONG_GAMMA_MIN_EDGE = 0.05  # relaxed edge floor for buying (ATM options may have lower edge)
 DEFAULT_DELTA_LIMIT = 1000   # fallback delta limit until news arrives
 RTM_HEDGE_FRAC      = 0.60   # max fraction of RTM_SHARE_LIMIT used for initial hedge
 HEDGE_BAND_FRAC     = 0.75   # re-hedge in hold phase when |delta| > this * delta_limit
@@ -254,13 +256,38 @@ def _build_position(tapi: TradingAPI, prices: dict) -> None:
     Enter PRIMARY_QTY of the best-edge option and SECONDARY_QTY of the best
     truly-opposite-delta option. Batches are interleaved to keep net position low.
     If no opposite-delta secondary exists, primary is capped to 1000 (net limit).
+
+    Short gamma (selling): only sell options ≥ SHORT_GAMMA_MIN_OTM from spot.
+    Long gamma (buying): prefer the ATM-closest option with edge ≥ LONG_GAMMA_MIN_EDGE.
     """
-    signals = _identify_mispricings(prices)
-    if not signals:
+    S = _state["rtm_price"]
+
+    # Sell candidates: OTM-only (short gamma safety), standard edge threshold
+    sell_signals = [s for s in
+                    _identify_mispricings(prices, min_edge=MIN_EDGE,
+                                          min_otm_for_sell=SHORT_GAMMA_MIN_OTM)
+                    if s[1] == "SELL"]
+
+    # Buy candidates: any moneyness, relaxed edge; sort ATM-closest first (max gamma exposure)
+    buy_signals = [s for s in
+                   _identify_mispricings(prices, min_edge=LONG_GAMMA_MIN_EDGE)
+                   if s[1] == "BUY"]
+    buy_signals.sort(key=lambda s: abs(_parse_ticker(s[0])[1] - S))
+
+    best_sell = sell_signals[0] if sell_signals else None
+    best_buy  = buy_signals[0]  if buy_signals  else None
+
+    if not best_sell and not best_buy:
         print("  [build] no mispricings above threshold")
         return
 
-    p_ticker, p_action, p_edge, p_abs_delta = signals[0]
+    # Primary: whichever has higher absolute edge
+    if best_sell and best_buy:
+        primary = best_sell if abs(best_sell[2]) >= abs(best_buy[2]) else best_buy
+    else:
+        primary = best_sell or best_buy
+
+    p_ticker, p_action, p_edge, p_abs_delta = primary
     p_sign = _position_signed_delta(p_ticker, p_action, p_abs_delta)
 
     def is_opposite(s) -> bool:
@@ -269,11 +296,12 @@ def _build_position(tapi: TradingAPI, prices: dict) -> None:
         return (s[1] != p_action
                 and _position_signed_delta(s[0], s[1], s[3]) * p_sign < 0)
 
-    # Find secondary: must be opposite-action AND opposite delta direction.
-    # Tier-3 (any opposite action) is intentionally omitted — deep-ITM options
-    # with tiny BUY edges have delta ≈ ±1 and would amplify exposure catastrophically.
-    all_sigs_any = _identify_mispricings(prices, min_edge=0.0)
-    sec = next((s for s in signals[1:] if is_opposite(s)), None)
+    # Secondary pool: OTM filter still applies for any sells
+    all_sigs_any = _identify_mispricings(prices, min_edge=0.0,
+                                          min_otm_for_sell=SHORT_GAMMA_MIN_OTM)
+    # Build a combined list for secondary search (buys from either list, sells OTM-filtered)
+    combined_for_secondary = sell_signals + buy_signals
+    sec = next((s for s in combined_for_secondary if s[0] != p_ticker and is_opposite(s)), None)
     if sec is None:
         sec = next((s for s in all_sigs_any if s[0] != p_ticker and is_opposite(s)), None)
 
@@ -304,10 +332,14 @@ def _build_position(tapi: TradingAPI, prices: dict) -> None:
         max_by_rtm = int(rtm_budget / max(delta_per_contract, 1))
         p_total = min(OPTIONS_NET_LIMIT, max_by_rtm)
 
-    print(f"  [build] RV={_state['realized_vol']:.1%}")
-    print(f"    PRIMARY   {p_action:4s} {p_total}x {p_ticker}  edge={p_edge:+.3f}")
+    _, p_K = _parse_ticker(p_ticker)
+    p_otm = abs(p_K - S)
+    print(f"  [build] RV={_state['realized_vol']:.1%}  RTM={S:.2f}")
+    print(f"    PRIMARY   {p_action:4s} {p_total}x {p_ticker}  edge={p_edge:+.3f}  |K-S|={p_otm:.1f}")
     if sec:
-        print(f"    SECONDARY {s_action:4s} {s_total}x {s_ticker}  edge={s_edge:+.3f}")
+        _, s_K = _parse_ticker(s_ticker)
+        s_otm = abs(s_K - S)
+        print(f"    SECONDARY {s_action:4s} {s_total}x {s_ticker}  edge={s_edge:+.3f}  |K-S|={s_otm:.1f}")
 
     # Interleave primary and secondary batches to stay within net limits
     p_sent = 0
@@ -362,10 +394,16 @@ def _close_all(tapi: TradingAPI) -> None:
 
 # ── Mispricings ────────────────────────────────────────────────────────────────
 
-def _identify_mispricings(prices: dict, min_edge: float = MIN_EDGE) -> list:
+def _identify_mispricings(
+    prices: dict,
+    min_edge: float = MIN_EDGE,
+    min_otm_for_sell: float = 0.0,
+) -> list:
     """
     Return list of (ticker, action, edge, abs_delta) sorted by |edge| desc.
     action is 'BUY' (underpriced) or 'SELL' (overpriced).
+    If min_otm_for_sell > 0, SELL signals are filtered to options at least that
+    far from spot (short-gamma safety: avoid selling near-ATM options).
     """
     S  = _state["rtm_price"]
     T  = _state["tte"]
@@ -380,6 +418,9 @@ def _identify_mispricings(prices: dict, min_edge: float = MIN_EDGE) -> list:
         fair  = _bs_price(S, K, T, RISK_FREE_RATE, rv, is_call)
         edge  = fair - mkt
         if abs(edge) < min_edge:
+            continue
+        # Short-gamma filter: only sell options sufficiently OTM
+        if edge < 0 and min_otm_for_sell > 0 and abs(K - S) < min_otm_for_sell:
             continue
         delta = _bs_delta(S, K, T, RISK_FREE_RATE, rv, is_call)
         signals.append((ticker, "BUY" if edge > 0 else "SELL", edge, abs(delta)))
