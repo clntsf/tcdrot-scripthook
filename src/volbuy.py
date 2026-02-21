@@ -272,18 +272,14 @@ def _build_position(tapi: TradingAPI, prices: dict) -> None:
         return
 
     rtm_budget = RTM_SHARE_LIMIT * RTM_HEDGE_FRAC
-    is_straddle = len(legs) == 2
+    label = 'straddle' if len(legs) == 2 else 'single leg'
 
-    print(f"  [build] RV={rv:.1%}  RTM={S:.2f}  ({'straddle' if is_straddle else 'single leg'})")
+    print(f"  [build] RV={rv:.1%}  RTM={S:.2f}  ({label})")
     for ticker, edge, abs_delta, otm_dist in legs:
-        if is_straddle:
-            # Call and put deltas cancel; use full net limit
-            qty = OPTIONS_NET_LIMIT
-        else:
-            # Single leg: cap by RTM hedge budget
-            delta_per_contract = abs_delta * OPTION_MULTIPLIER
-            max_by_rtm = int(rtm_budget / max(delta_per_contract, 1))
-            qty = min(OPTIONS_NET_LIMIT, max_by_rtm)
+        # Cap each leg individually by how many contracts the RTM budget can hedge
+        delta_per_contract = abs_delta * OPTION_MULTIPLIER
+        max_by_rtm = int(rtm_budget / max(delta_per_contract, 1))
+        qty = min(OPTIONS_NET_LIMIT, max_by_rtm)
 
         print(f"    BUY {qty}x {ticker}  edge={edge:+.3f}  |K-S|={otm_dist:.1f}")
         sent = 0
@@ -340,6 +336,28 @@ def _execute_trade(tapi: TradingAPI, ticker: str, action: str, qty: int) -> None
         print(f"  [order error] {action} {qty}x {ticker}: {e}")
 
 
+def _force_orphan(tapi: TradingAPI) -> None:
+    """Market-close the entire RTM position, no questions asked."""
+    pos = _state["rtm_position"]
+    if pos == 0:
+        return
+    action = "SELL" if pos > 0 else "BUY"
+    total = abs(pos)
+    print(f"  [force_orphan] {action} {total} RTM")
+    sent = 0
+    while sent < total:
+        batch = min(RTM_MAX_ORDER, total - sent)
+        try:
+            tapi.post_order("RTM", "MARKET", batch, action)
+            _state["rtm_position"] += batch if action == "BUY" else -batch
+            sent += batch
+        except Exception as e:
+            print(f"  [force_orphan error] {e}")
+            break
+        if sent < total:
+            time.sleep(0.1)
+
+
 def _execute_hedge(tapi: TradingAPI, force: bool = False) -> None:
     """
     Trade RTM to bring portfolio delta to zero, capped by RTM net headroom.
@@ -364,8 +382,14 @@ def _execute_hedge(tapi: TradingAPI, force: bool = False) -> None:
                 break
     except Exception:
         pass
-    current_net = abs(_state["rtm_position"])
-    room = max(0, int(net_limit * 0.95) - current_net)
+    safe_limit = int(net_limit * 0.95)
+    pos = _state["rtm_position"]
+    # Room is directional: buying can go up to +safe_limit; selling can go down to -safe_limit.
+    # This allows force-closing a long position (selling pos back to 0) without being blocked.
+    if shares > 0:
+        room = max(0, safe_limit - pos)
+    else:
+        room = max(0, safe_limit + pos)
     shares = max(-room, min(room, shares))
 
     if shares == 0:
@@ -435,7 +459,7 @@ def run_trading_loop() -> None:
             # unwind), close it every tick until flat — never build on an orphaned hedge
             if not _state["positions"] and _state["rtm_position"] != 0:
                 print(f"  [orphan RTM] no options, RTM={_state['rtm_position']:+d} — force closing")
-                _execute_hedge(tapi, force=True)
+                _force_orphan(tapi)
                 time.sleep(1)
                 continue
 
