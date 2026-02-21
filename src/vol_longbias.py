@@ -45,7 +45,11 @@ UNWIND_AT_TICK = 59
 
 BASE_QTY_CALL = 400
 BASE_QTY_PUT = 400
-LONG_STRADDLE_MIN_EDGE = 0.10
+BASE_QTY_SINGLE_LEG = 200
+LONG_STRADDLE_MIN_EDGE = 0.05
+SINGLE_LEG_MIN_EDGE = 0.04
+SINGLE_LEG_MIN_ABS_DELTA = 0.35
+SINGLE_LEG_MAX_ABS_DELTA = 0.65
 COVERED_SHORT_MIN_EDGE = 0.10
 TAIL_SHORT_MAX_ABS_DELTA = 0.10
 SHORT_CONTRACT_CAP_FRAC = 0.25
@@ -424,6 +428,35 @@ def _best_underpriced_straddle(prices: dict) -> Optional[dict]:
     return None
 
 
+def _best_underpriced_single_leg(prices: dict) -> Optional[dict]:
+    """Fallback when no straddle qualifies: pick near-ATM underpriced single leg."""
+    S = _state["rtm_price"]
+    candidates = []
+
+    for ticker, mkt in prices.items():
+        _, abs_delta, _, edge, K, is_call = _option_model_inputs(ticker, mkt)
+        if edge < SINGLE_LEG_MIN_EDGE:
+            continue
+        if not (SINGLE_LEG_MIN_ABS_DELTA <= abs_delta <= SINGLE_LEG_MAX_ABS_DELTA):
+            continue
+        candidates.append(
+            {
+                "ticker": ticker,
+                "edge": edge,
+                "abs_delta": abs_delta,
+                "distance": abs(K - S),
+                "strike": K,
+                "side": "CALL" if is_call else "PUT",
+            }
+        )
+
+    if not candidates:
+        return None
+
+    candidates.sort(key=lambda x: (x["distance"], abs(x["abs_delta"] - 0.50), -x["edge"]))
+    return candidates[0]
+
+
 def _covered_tail_short_candidates(prices: dict, side: Optional[str] = None) -> list:
     """
     Return overpriced far-OTM short candidates with low absolute delta.
@@ -497,9 +530,22 @@ def _build_long_straddle(tapi: TradingAPI, prices: dict) -> bool:
 
     candidate = _best_underpriced_straddle(prices)
     if not candidate:
-        _state["last_straddle_edge"] = 0.0
-        print("  [build] no underpriced ATM straddle above threshold")
-        return True
+        single = _best_underpriced_single_leg(prices)
+        if not single:
+            _state["last_straddle_edge"] = 0.0
+            print("  [build] no underpriced straddle or near-ATM single-leg above threshold")
+            return True
+
+        qty = min(BASE_QTY_SINGLE_LEG, OPTIONS_NET_LIMIT)
+        print(f"  [build] RV={_state['realized_vol']:.1%} RTM={_state['rtm_price']:.2f}")
+        print(
+            f"    SINGLE   BUY {qty}x {single['ticker']}"
+            f" edge={single['edge']:+.3f} |delta|={single['abs_delta']:.3f}"
+        )
+        ok = _execute_batched_option_order(tapi, single["ticker"], "BUY", qty)
+        _state["built_this_subheat"] = True
+        _state["last_entry_strike"] = single["strike"]
+        return ok
 
     _state["last_straddle_edge"] = candidate["straddle_edge"]
 
